@@ -48,7 +48,68 @@
     <p class="meta-line">Android 7.0+ &#183; JPEG &#183; PNG &#183; WebP &#183; PDF &#183; Apache 2.0</p>
   </div>
   <div class="hero-visual" aria-hidden="true">
-    <svg class="drop" viewBox="0 0 108 108"><circle cx="54" cy="54" r="42" fill="#2E7D4F"/><path d="M54 24 C58 31 66 41 71 49 C76 57 79 64 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 64 32 57 37 49 C42 41 50 31 54 24 Z" fill="#FBF9F2"/><path d="M33 52 L75 52 L75 56 L33 56 Z" fill="#2A2620"/><path d="M42 64 L66 64 L66 66 L42 66 Z" fill="#2A2620"/></svg>
+    <div class="phone">
+      <div class="phone-notch"></div>
+
+      <!-- screen 1: source app chat -->
+      <div class="demo-flow-screen" data-flow="chat">
+        <div class="chat-header">
+          <span class="chat-avatar">A</span>
+          <span>Anna</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble incoming"><img src="favicon.svg" alt="" width="48" height="48"></div>
+          <div class="bubble outgoing">beach today</div>
+          <div class="bubble incoming">send the photo?</div>
+        </div>
+        <div class="sharebar">
+          <span class="share-btn-tap">Share</span>
+        </div>
+      </div>
+
+      <!-- screen 2: share sheet -->
+      <div class="demo-flow-screen" data-flow="sheet">
+        <div class="sheet-sheet">
+          <div class="sheet-title">Share to&#8230;</div>
+          <div class="sheet-app sheet-app-active">
+            <svg class="mark-sm" viewBox="0 0 108 108"><circle cx="54" cy="54" r="42" fill="#2E7D4F"/><path d="M54 24 C58 31 66 41 71 49 C76 57 79 64 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 64 32 57 37 49 C42 41 50 31 54 24 Z" fill="#FBF9F2"/><path d="M33 52 L75 52 L75 56 L33 56 Z" fill="#2A2620"/><path d="M42 64 L66 64 L66 66 L42 66 Z" fill="#2A2620"/></svg>
+            <div class="sheet-app-name">ExifDrop</div>
+            <div class="sheet-app-tag">strip metadata</div>
+          </div>
+          <div class="sheet-app sheet-app-dim"><span class="sheet-app-dot">W</span><span class="sheet-app-name">WhatsApp</span></div>
+          <div class="sheet-app sheet-app-dim"><span class="sheet-app-dot">TG</span><span class="sheet-app-name">Telegram</span></div>
+          <div class="sheet-app sheet-app-dim"><span class="sheet-app-dot">M</span><span class="sheet-app-name">Email</span></div>
+        </div>
+      </div>
+
+      <!-- screen 3: stripping -->
+      <div class="demo-flow-screen" data-flow="strip">
+        <div class="strip-wrap">
+          <div class="strip-icon">
+            <svg class="mark-sm" viewBox="0 0 108 108"><circle cx="54" cy="54" r="42" fill="#2E7D4F"/><path d="M54 24 C58 31 66 41 71 49 C76 57 79 64 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 64 32 57 37 49 C42 41 50 31 54 24 Z" fill="#FBF9F2"/><path d="M33 52 L75 52 L75 56 L33 56 Z" fill="#2A2620"/><path d="M42 64 L66 64 L66 66 L42 66 Z" fill="#2A2620"/></svg>
+          </div>
+          <div class="strip-title">Stripping metadata&#8230;</div>
+          <ul class="strip-list">
+            <li class="strip-done">GPS removed</li>
+            <li class="strip-done">Camera removed</li>
+            <li class="strip-done">Timestamp removed</li>
+            <li class="strip-pending">writing clean file</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- screen 4: clean result -->
+      <div class="demo-flow-screen" data-flow="clean">
+        <div class="clean-wrap">
+          <div class="clean-check">
+            <svg class="mark-sm" viewBox="0 0 108 108"><circle cx="54" cy="54" r="42" fill="#2E7D4F"/><path d="M54 24 C58 31 66 41 71 49 C76 57 79 64 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 64 32 57 37 49 C42 41 50 31 54 24 Z" fill="#FBF9F2"/><path d="M33 52 L75 52 L75 56 L33 56 Z" fill="#2A2620"/><path d="M42 64 L66 64 L66 66 L42 66 Z" fill="#2A2620"/></svg>
+          </div>
+          <div class="clean-title">Clean copy added</div>
+          <div class="clean-file">share_a1b2c3.jpg</div>
+          <div class="clean-note">original untouched</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -208,5 +269,6 @@
 </footer>
 
 <script src="demo.js"></script>
+<script src="demo-flow.js"></script>
 </body>
 </html>
