@@ -34,11 +34,13 @@ object ImageStripper {
         try {
             tmp.outputStream().buffered().use { input.copyTo(it) }
             val exif = ExifInterface(tmp.absolutePath)
-            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            // Read as raw string: getAttributeInt's default would fabricate ORIENTATION_NORMAL
+            // onto files that never had EXIF, injecting a synthesized APP1 into clean output.
+            val orientation = exif.getAttribute(ExifInterface.TAG_ORIENTATION)
             wipe(exif)
-            // Re-apply orientation so the wiper doesn't rotate the photo.
-            if (orientation != ExifInterface.ORIENTATION_UNDEFINED) {
-                exif.setAttribute(ExifInterface.TAG_ORIENTATION, orientation.toString())
+            // Re-apply orientation only if the source actually carried one.
+            if (orientation != null && orientation != ExifInterface.ORIENTATION_UNDEFINED.toString()) {
+                exif.setAttribute(ExifInterface.TAG_ORIENTATION, orientation)
             }
             exif.saveAttributes()
             tmp.inputStream().use { it.copyTo(out) }

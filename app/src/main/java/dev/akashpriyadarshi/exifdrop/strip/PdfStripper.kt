@@ -26,15 +26,25 @@ object PdfStripper {
         check(s.startsWith("%PDF-")) { "Not a PDF" }
         val chars = s.toCharArray()
 
-        INFO_REF.find(s)?.let { m -> blankObject(chars, m.groupValues[1].toInt()) }
-            ?: INFO_DIRECT.find(s)?.let { m ->
+        // Object streams (/ObjStm) compress /Info and metadata so the plaintext regexes
+        // below silently no-op — that would hand off a DIRTY file. Detect and refuse.
+        val objStm = Regex("""(?<!\d)\d+\s+\d+\s+obj\s*<<[^>]*/Type\s*/ObjStm[^>]*>>""")
+        val infoRef = INFO_REF.find(s)
+        val infoDirect = INFO_DIRECT.find(s)
+        val metaRef = META_REF.find(s)
+        if (objStm.containsMatchIn(s) && infoRef == null && infoDirect == null && metaRef == null) {
+            throw IllegalArgumentException("PDF uses object streams; metadata cannot be stripped losslessly")
+        }
+
+        infoRef?.let { m -> blankObject(chars, m.groupValues[1].toInt()) }
+            ?: infoDirect?.let { m ->
                 // Match is "/Info <<" — dict opens at range.last - 1 (the << right before the
                 // second <). Starting from range.last would land on the NEXT dict in the object.
                 val open = s.indexOf("<<", m.range.last - 1)
                 if (open >= 0) blankDict(chars, open, findDictEnd(chars, open))
             }
 
-        META_REF.find(s)?.let { m -> blankStream(chars, m.groupValues[1].toInt()) }
+        metaRef?.let { m -> blankStream(chars, m.groupValues[1].toInt()) }
 
         out.write(String(chars).toByteArray(Charsets.ISO_8859_1))
         out.flush()
@@ -64,7 +74,19 @@ object PdfStripper {
                 val k = str.indexOf(key, start)
                 if (k in start until dictEnd) {
                     var vEnd = k + key.length
-                    while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
+                    // /Filter's VALUE must die too, or a strict viewer tries to inflate the
+                    // space-blanked payload (Z_DATA_ERROR). Value is a name, a number, or [ ... ].
+                    if (key == "/Filter") {
+                        while (vEnd < dictEnd && chars[vEnd].isWhitespace()) vEnd++
+                        if (vEnd < dictEnd && chars[vEnd] == '[') {
+                            while (vEnd < dictEnd && chars[vEnd] != ']') vEnd++
+                            if (vEnd < dictEnd) vEnd++
+                        } else {
+                            while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
+                        }
+                    } else {
+                        while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
+                    }
                     for (i in k until vEnd) chars[i] = ' '
                 }
             }
