@@ -12,6 +12,8 @@ captures/
 *.aab
 *.key
 *.jks
+*.p12
+*.keystore
 keystore.properties
 
 # Kotlin
