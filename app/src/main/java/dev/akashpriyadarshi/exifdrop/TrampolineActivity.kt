@@ -4,11 +4,13 @@ import android.content.ClipData
 import android.content.ComponentName
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
+import android.view.Window
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -33,12 +35,14 @@ import java.util.concurrent.Executors
  */
 class TrampolineActivity : ComponentActivity() {
 
+    private var _executor: java.util.concurrent.ExecutorService? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Make the cover draw over the whole display. In freeform/floating windowing the
-        // frame is what the OEM chose, so extend the DRAW beyond it: decor fills the screen.
-        // resizeableActivity=false (manifest) keeps this out of freeform on APIs that honor
-        // it. windowIsFloating is FALSE (opaque theme), so the window is a normal full task.
+        // Freeform/desktop windowing (device-wide, affects every app) hands this a small
+        // float. Extend the DRAW past the frame so the cover fills the display even when the
+        // WM gives a freeform rect; translucent theme keeps the frame out of freeform where
+        // the OEM honors it.
         window.addFlags(
             android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                     or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -76,6 +80,12 @@ class TrampolineActivity : ComponentActivity() {
             addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 16.dp() })
         }
         setContentView(root)
+        // Freeform/desktop windowing can launch this as a floating window with a caption
+        // (3-dot menu with full screen / split / minimise / close). Declarative opt-outs
+        // (resizeableActivity=false, translucent) are bypassed when the system forces
+        // resizable, so expand the window to the full display ourselves — the same thing
+        // the caption's "full screen" button does. Runs post-layout, no-op if unavailable.
+        window.decorView.post { expandFreeformToFullScreen() }
 
         val sources = collectSources()
         if (sources.isEmpty()) {
@@ -86,6 +96,7 @@ class TrampolineActivity : ComponentActivity() {
 
         // Strip on a background thread so the cover never janks; then hand off.
         val exec = Executors.newSingleThreadExecutor()
+        _executor = exec
         exec.execute {
             val cleaned = ArrayList<Clean>()
             var skipped = 0
@@ -97,7 +108,7 @@ class TrampolineActivity : ComponentActivity() {
                 }
             }
             runOnUiThread {
-                exec.shutdown()
+                if (isDestroyed || isFinishing) return@runOnUiThread // user quit mid-strip
                 if (cleaned.isEmpty()) {
                     Toast.makeText(this@TrampolineActivity,
                         if (sources.size > 1) "None of those files could be stripped." else "Couldn't strip that file.",
@@ -116,7 +127,40 @@ class TrampolineActivity : ComponentActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        // Back mid-strip would destroy the activity under the still-running executor and race
+        // runOnUiThread's startActivity. Block it for the short strip window; the chooser that
+        // follows has its own back handling.
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        _executor?.shutdownNow()
+    }
+
+    /** A second share while the first is still stripping re-launches this singleInstance. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+
+    /**
+     * If the OEM places this trampoline in a freeform/floating window (the 3-dot caption
+     * bar with full screen / split / minimise / close), expand its bounds to the whole
+     * display. Hidden API Window.setBounds(Rect) is the same call the caption's "full
+     * screen" button makes; guard it so a missing method is a no-op, never a crash.
+     */
+    private fun expandFreeformToFullScreen() {
+        try {
+            val m = Window::class.java.getMethod("setBounds", Rect::class.java)
+            val dm = resources.displayMetrics
+            m.invoke(window, Rect(0, 0, dm.widthPixels, dm.heightPixels))
+        } catch (e: Throwable) {
+            // Freeform not active or method absent: nothing to do.
+        }
+    }
 
     /** Pull source URIs from the share intent: clipData (multi/single) or EXTRA_STREAM (single SEND). */
     private fun collectSources(): List<Uri> {
@@ -132,6 +176,8 @@ class TrampolineActivity : ComponentActivity() {
                 IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
                     ?.let { if (!isOwnProvider(it)) out.add(it) }
             }
+            // Dedupe: SEND_MULTIPLE with the same file twice used to strip+cache+hand it twice.
+            return ArrayList(LinkedHashSet(out))
         } catch (e: Throwable) {
             // Nothing to hand off; the share dies here rather than leak metadata.
         }
@@ -145,6 +191,9 @@ class TrampolineActivity : ComponentActivity() {
      *  (FileProvider would re-guess from the neutral extension, losing .JPG → image/jpeg). */
     private fun prepare(src: Uri): Clean? {
         val mime = contentResolver.getType(src) ?: return null
+        // Fail closed: only exact types we provably strip. SVG/GIF/BMP/AVIF/HEIC would either
+        // pass through dirty or misbehave in exifinterface — refuse loudly, not silently.
+        if (mime !in setOf("image/jpeg", "image/png", "image/webp", "application/pdf")) return null
         return try {
             // Cap the in-RAM buffer. Reality: phone photos top out ~20MB; WebP stripper
             // already buffers the whole file. A pathological 1GB image would OOM before

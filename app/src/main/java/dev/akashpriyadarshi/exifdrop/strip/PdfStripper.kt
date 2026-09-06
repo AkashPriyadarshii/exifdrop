@@ -35,6 +35,19 @@ object PdfStripper {
         if (objStm.containsMatchIn(s) && infoRef == null && infoDirect == null && metaRef == null) {
             throw IllegalArgumentException("PDF uses object streams; metadata cannot be stripped losslessly")
         }
+        // Fail closed on the sneaky variant: /Info N 0 R in the trailer where object N is
+        // packed inside an ObjStm (no literal `N 0 obj` header exists for it). The blankers
+        // regex for that header, find nothing, and return silently — dirty metadata ships.
+        // Every referenced object must resolve to a literal object; otherwise refuse.
+        val refs = listOfNotNull(
+            infoRef?.groupValues?.getOrNull(1)?.toInt(),
+            metaRef?.groupValues?.getOrNull(1)?.toInt(),
+        )
+        for (n in refs) {
+            if (!Regex("""(?<!\d)$n\s+0\s+obj""").containsMatchIn(s)) {
+                throw IllegalArgumentException("PDF uses object streams; metadata cannot be stripped losslessly")
+            }
+        }
 
         infoRef?.let { m -> blankObject(chars, m.groupValues[1].toInt()) }
             ?: infoDirect?.let { m ->

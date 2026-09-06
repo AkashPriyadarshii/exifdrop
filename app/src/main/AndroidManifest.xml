@@ -33,7 +33,7 @@
             android:launchMode="singleInstance"
             android:theme="@style/Theme.ExifDrop.Trampoline"
             android:resizeableActivity="false"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:enableOnBackInvokedCallback="false">
 
             <intent-filter>

@@ -99,6 +99,20 @@ class StripperTest {
     }
 
     @Test
+    fun pdf_objStmRef_throwsDirtyHandoff() {
+        // /Info 3 0 R in the trailer, but object 3 lives compressed inside an ObjStm — no
+        // literal "3 0 obj" exists, so the blankers would silently no-op and DIRTY metadata
+        // would ship. Must refuse, loud.
+        val pdf = "%PDF-1.4\n" +
+            "1 0 obj\n<< /Type /ObjStm /N 3 /First 30 >>\nstream\n3 0 << /Title (X) >>\nendstream\nendobj\n" +
+            "trailer\n<< /Root 1 0 R /Info 3 0 R >>\n" +
+            "startxref\n0\n%%EOF\n"
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), java.io.ByteArrayOutputStream())
+        }
+    }
+
+    @Test
     fun pdf_scrubsInlineInfoDict() {
         // /Info written INLINE in the trailer (<< after the name, not a ref) — the
         // INFO_DIRECT branch. The dict's own keys must be scrubbed, not the NEXT dict.
