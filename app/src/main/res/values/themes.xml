@@ -8,8 +8,12 @@
     </style>
 
     <!-- Covers the whole screen during the strip before the destination chooser.
+         Translucent: a translucent window can never be placed in freeform/floating
+         windowing, so the share-sheet pick lands as a true FULL-SCREEN cover, not a
+         resizable bubble. The opaque full-screen cover is drawn on top as content.
          Opaque paper so picking ExifDrop doesn't flash the app behind or the launcher. -->
     <style name="Theme.ExifDrop.Trampoline" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@color/exifdrop_bg</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
