@@ -13,7 +13,7 @@ Handoff notes for the next session/agent picking this up. Everything needed to c
 1. `gh search repos exifdrop` done → name free. Do not re-run.
 2. Add `LICENSE` (Apache-2.0, author Akash Priyadarshi), `memory/*.md` per the skeleton pattern.
 3. `git init` at `Desktop/exifdrop`, branch `main`.
-4. On user's **"go"**: Gradle scaffold (Kotlin DSL, version catalog) → manifest (trampoline, `image/*`+`application/pdf`, `exported="true"`, FileProvider) → strippers (image + WebP chunk + PDF) → trampoline activity → cache purge → JUnit fixtures → build/test on Realme GT7 over USB.
+4. On user's **"go"**: Gradle scaffold (Kotlin DSL, version catalog) → manifest (trampoline, `image/*`+`application/pdf`, `exported="true"`, FileProvider) → strippers (image + WebP chunk + PDF) → trampoline activity → cache purge → JUnit fixtures → build/test on test device over USB.
 
 ## Decisions that are locked (don't silently reverse)
 
@@ -40,7 +40,7 @@ See `session-handoff.md` — the full table. Short version:
 ## Context you'll want
 
 - Research accepted: `docs/PRD.md` (product), `docs/DESIGN.md` (engineering), `docs/ARCHITECTURE.md` (structure). All claims sourced from two independent research subagents (market + feasibility), 2026-09-06.
-- Device: Realme GT7, Android 16 (API 36), arm64. Host Windows 8GB — no emulator, test over USB.
+- Device: test device, Android 16 (API 36), arm64. Host Windows 8GB — no emulator, test over USB.
 - F-Droid path: trusted Maven repos only, no CVE-flagged deps (hand-rolled PDF avoids `KnownVuln`).
 
 ## Anti-slop reminder

@@ -26,20 +26,19 @@ Stack: Kotlin, minSdk 24, targetSdk 36, Jetpack Compose (shell only), no DI.
 
 ## Process
 
-Per the project gate: md skeleton first at root (this file, `AGENTS.md`, `STATE.md`, `CHANGELOG.md`, `session-handoff.md`, `README.md`, `docs/{PRD,DESIGN,ARCHITECTURE,HANDOFF}`, `memory/`), get go on docs, then code. Tests run locally in full. Build/test on the Realme GT7 over USB.
+Per the project gate: md skeleton first at root (this file, `AGENTS.md`, `STATE.md`, `CHANGELOG.md`, `session-handoff.md`, `README.md`, `docs/{PRD,DESIGN,ARCHITECTURE,HANDOFF}`, `memory/`), get go on docs, then code. Tests run locally in full. Build/test on the test device over USB.
 
 ## Release / asset update (v0.1) — do this, never debug
 
-The GitHub release asset `exifdrop-v0.1-signed.apk` is a **release build signed with the debug keystore** (`~/.android/debug.keystore`, alias `androiddebugkey`, pass `android`). There is no private release key on this machine. Its cert (SHA-256 `2704efdf07ac4da492c764b353233cf943efca5975625a839ebe207ffc5fbbe9`) is the identity your installed app must keep — a different cert breaks install-update.
+The GitHub release asset `exifdrop-v0.1-signed.apk` is a **release build signed with the local debug keystore**. There is no private release key. Its cert (SHA-256 `2704efdf07ac4da492c764b353233cf943efca5975625a839ebe207ffc5fbbe9`) is the identity your installed app must keep — a different cert breaks install-update.
 
 Every asset update must:
-1. Build: `./gradlew :app:assembleRelease` (R8 + shrink; output `app/build/outputs/apk/release/app-release-unsigned.apk`).
+1. Build: `.\gradlew.bat :app:assembleRelease` (R8 + shrink; output `app/build/outputs/apk/release/app-release-unsigned.apk`).
 2. Sign with the debug key — this IS the "signed" APK:
    ```
-   /c/Android/build-tools/36.0.0/zipalign.exe -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk exifdrop-v0.1-signed.apk
-   /c/Android/build-tools/36.0.0/apksigner.bat sign --ks ~/.android/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --out exifdrop-v0.1-signed.apk app/build/outputs/apk/release/app-release-unsigned.apk
+   zipalign -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk <tmp-aligned>
+   apksigner sign --ks <debug-keystore> --ks-pass pass:android --ks-key-alias androiddebugkey --out exifdrop-v0.1-signed.apk <tmp-aligned>
    ```
-   (If the two-step above smells wrong: `zipalign` the unsigned release to a temp, then `apksigner sign` it to the final name.)
 3. Verify the cert matches the known digest before touching GitHub: `apksigner.bat verify --print-certs exifdrop-v0.1-signed.apk` → SHA-256 must equal the value above.
 4. Upload (replaces the existing asset): `gh release upload v0.1 --repo AkashPriyadarshii/exifdrop --clobber exifdrop-v0.1-signed.apk`.
 

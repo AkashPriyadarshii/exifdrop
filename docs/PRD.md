@@ -45,4 +45,4 @@ FOSS/privacy-conscious Android users. The casual-photo crowd is served by native
 
 ## Timeline
 
-Research complete 2026-09-06. Code on go behind md-gate approval. First target: v0.1 APK on the Realme GT7.
+Research complete 2026-09-06. Code on go behind md-gate approval. First target: v0.1 APK on the test device.

@@ -7,7 +7,7 @@ Live status of ExifDrop. Update as state changes.
 - **Phase:** v0.1 scaffold (md skeleton). Awaiting code go.
 - **Name locked:** ExifDrop. Verified clear on GitHub, Play, App Store, F-Droid, domains.
 - **Assigned:** 2026-09-06.
-- **Device target:** Realme GT7, Android 16 (API 36), arm64 — build/test over USB.
+- **Device target:** test device, Android 16 (API 36), arm64 — build/test over USB.
 - **Distro:** Apache 2.0, GitHub Releases + F-Droid.
 
 ## Open
@@ -21,7 +21,7 @@ Live status of ExifDrop. Update as state changes.
 - [ ] Cache purge in `Application.onCreate` (>24h / >64MB).
 - [ ] JUnit fixtures + assertions.
 - [ ] Apache-2.0 LICENSE.
-- [ ] Build + test on Realme GT7.
+- [ ] Build + test on test device.
 
 ## Decisions logged
 

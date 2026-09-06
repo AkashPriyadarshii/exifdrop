@@ -29,7 +29,7 @@ Greenfield Android app, Kotlin, no Compose, no DI. Two dependencies total.
 
 1. md files live at repo root with code: `CLAUDE.md`, `STATE.md`, `CHANGELOG.md`, `session-handoff.md`, `README.md`.
 2. Docs under `docs/{PRD,DESIGN,ARCHITECTURE,HANDOFF}`, memory under `memory/`.
-3. Code behind tests locally. Test on the Realme GT7 over USB — the host is an 8GB Windows box, no emulator.
+3. Code behind tests locally. Test on the test device over USB — the host is an 8GB Windows box, no emulator.
 
 ## Testing
 

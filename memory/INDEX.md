@@ -11,5 +11,5 @@ Standing knowledge for ExifDrop (jr's local memory, not the repo wiki).
 - ExifDrop v0.1 — md skeleton. Awaiting code go.
 - Name locked: ExifDrop (clear anywhere, verified).
 - Wedge: share-sheet-native + lossless + zero-UI PDF. Thin moat — Scrambled Exif is one PDF-lib + intent-filter from closing it. Ship fast.
-- Device: Realme GT7, Android 16 (API 36), arm64. Build/test over USB.
+- Device: test device, Android 16 (API 36), arm64. Build/test over USB.
 - Distro: Apache 2.0, GitHub Releases + F-Droid.
