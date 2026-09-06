@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Launcher: Material3, DayNight. Tokens live in Compose (ui/theme/Theme.kt). -->
+    <style name="Theme.ExifDrop" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
     <!-- Fully transparent, no window frame, no visible UI. The activity inflates nothing. -->
     <style name="Theme.ExifDrop.Transparent" parent="android:Theme.Translucent.NoTitleBar">
         <item name="android:windowBackground">@android:color/transparent</item>

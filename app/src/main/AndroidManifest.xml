@@ -7,7 +7,19 @@
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ExifDrop.Transparent">
+        android:theme="@style/Theme.ExifDrop">
+
+        <!-- Launcher: the status hub + settings shell. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.ExifDrop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- Zero-UI share-flow target. Launched from the share sheet, strips metadata,
              hands a clean file to the real destination, then finishes. Never rendered. -->

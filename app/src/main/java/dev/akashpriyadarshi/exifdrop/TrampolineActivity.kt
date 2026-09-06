@@ -27,6 +27,7 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        purgeCache()
         val cleaned = ArrayList<Clean>()
         try {
             val clip = intent.clipData
@@ -79,9 +80,11 @@ class TrampolineActivity : ComponentActivity() {
                 val buf = ByteArrayOutputStream()
                 when (mime) {
                     "application/pdf" -> PdfStripper.strip(input, buf)
-                    "image/webp" -> ImageStripper.strip(input, buf, mime)
+                    "image/webp" -> ImageStripper.strip(input, buf, mime,
+                        stripGps = Prefs.stripGps(this), keepOrientation = Prefs.keepOrientation(this))
                     else -> if (mime.startsWith("image/")) {
-                        ImageStripper.strip(input, buf, mime)
+                        ImageStripper.strip(input, buf, mime,
+                            stripGps = Prefs.stripGps(this), keepOrientation = Prefs.keepOrientation(this))
                     } else return null
                 }
                 buf.toByteArray()
@@ -89,7 +92,7 @@ class TrampolineActivity : ComponentActivity() {
             if (bytes.isEmpty()) return null
 
             val dir = java.io.File(cacheDir, "cleaned").apply { mkdirs() }
-            val name = Renamer.name(queryName(src), bytes)
+            val name = Renamer.name(queryName(src), bytes, Prefs.filenamePattern(this))
             val out = java.io.File(dir, name)
             if (!out.exists()) out.writeBytes(bytes)
 
@@ -97,6 +100,14 @@ class TrampolineActivity : ComponentActivity() {
         } catch (e: IOException) {
             null
         }
+    }
+
+    /** Delete cleaned files older than the configured cache age. Call on launch. */
+    private fun purgeCache() {
+        val dir = java.io.File(cacheDir, "cleaned")
+        if (!dir.isDirectory) return
+        val cutoff = System.currentTimeMillis() - Prefs.cacheAgeDays(this) * 24L * 60 * 60 * 1000
+        dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
     }
 
     private fun queryName(uri: Uri): String? =

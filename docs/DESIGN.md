@@ -4,7 +4,7 @@ Engineering design, as-of 2026-09-06.
 
 ## Overview
 
-Zero-UI Android app. Registers as a share target for `image/*` + `application/pdf`. On share: read the Uri, strip metadata, rename neutral, hand a clean `content://` to the user's chosen destination via FileProvider, then the trampoline finishes.
+Android app that registers as a share target for `image/*` + `application/pdf`. On share: read the Uri, strip metadata, rename per the filename setting, hand a clean `content://` to the user's chosen destination via FileProvider, then the trampoline finishes. A thin Compose shell (`MainActivity`) surfaces status and settings; the trampoline remains the only path that does strip work.
 
 ## Architecture
 
@@ -42,14 +42,15 @@ Hand-rolled metadata rewriter (no `pdfbox-android`):
 
 ## Hand-off & UX
 
-- **Filename scrub:** outgoing name `share_<hash>.<ext>` — kills the date-in-name pattern `IMG_20250115_140233.jpg`.
-- **Cache purge:** in `Application.onCreate`, delete stripped files >24h old or when cache exceeds 64MB. Zero settings.
-- **Cold start:** minimal `Application`, no DI, no Compose. Keep tens-of-ms.
+- **Filename:** default `share_<hash>.<ext>` — kills the date-in-name pattern `IMG_20250115_140233.jpg`. "Keep name" setting preserves the source stem.
+- **Cache purge:** on trampoline launch, delete stripped files older than the configured `cache_age_days` (default 1).
+- **Settings shell:** Compose `MainActivity` renders status + four persisted controls (filename pattern, GPS strip, keep orientation, cache age). SharedPreferences behind `Prefs`; no DI.
+- **Settings flow into strip:** `ImageStripper.strip(..., stripGps, keepOrientation)`, `Renamer.name(..., pattern)`, `TrampolineActivity.purgeCache()` — all three read `Prefs` at share time, so a setting change is live on the next share.
 
 ## Stack & constraints
 
-- Kotlin, minSdk 24, targetSdk 36. No Compose, no appcompat, no DI, no INTERNET permission.
-- Deps: `androidx.exifinterface:1.4.2`. Everything else stdlib/platform.
+- Kotlin, minSdk 24, targetSdk 36. Compose shell only (BOM 2024.10.01, M3 1.3.0), no appcompat, no DI, no INTERNET permission.
+- Deps: `androidx.exifinterface:1.4.2`, Compose (`ui`, `material3`, `activity-compose`, material-icons-core). Everything else stdlib/platform.
 - F-Droid path: FLOSS, trusted Maven repos only, no CVE-flagged deps (hand-rolled PDF avoids `KnownVuln`).
 
 ## Risks / edge cases

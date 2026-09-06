@@ -23,7 +23,13 @@ object ImageStripper {
      * the receiver doesn't render the photo sideways.
      */
     @Throws(IOException::class)
-    fun strip(input: InputStream, out: OutputStream, mimeType: String?) {
+    fun strip(
+        input: InputStream,
+        out: OutputStream,
+        mimeType: String?,
+        stripGps: Boolean = true,
+        keepOrientation: Boolean = true,
+    ) {
         // Detect type. exifinterface's [ExifInterface] works on a path; for WebP we hand-roll.
         if (mimeType == "image/webp") {
             WebpStripper.strip(input, out)
@@ -37,9 +43,9 @@ object ImageStripper {
             // Read as raw string: getAttributeInt's default would fabricate ORIENTATION_NORMAL
             // onto files that never had EXIF, injecting a synthesized APP1 into clean output.
             val orientation = exif.getAttribute(ExifInterface.TAG_ORIENTATION)
-            wipe(exif)
-            // Re-apply orientation only if the source actually carried one.
-            if (orientation != null && orientation != ExifInterface.ORIENTATION_UNDEFINED.toString()) {
+            wipe(exif, stripGps)
+            // Re-apply orientation only if the source actually carried one AND the user kept it.
+            if (keepOrientation && orientation != null && orientation != ExifInterface.ORIENTATION_UNDEFINED.toString()) {
                 exif.setAttribute(ExifInterface.TAG_ORIENTATION, orientation)
             }
             exif.saveAttributes()
@@ -50,9 +56,9 @@ object ImageStripper {
     }
 
     /** Drop every EXIF tag the library knows, plus XMP (both segments) and ICC white-balance cruft. */
-    private fun wipe(exif: ExifInterface) {
-        // Wipe all known GPS.
-        for (tag in GPS_TAGS) exif.setAttribute(tag, null)
+    private fun wipe(exif: ExifInterface, stripGps: Boolean) {
+        // Wipe all known GPS (unless the user opted to keep it).
+        if (stripGps) for (tag in GPS_TAGS) exif.setAttribute(tag, null)
         // Wipe camera/make/software/date-time.
         for (tag in INFO_TAGS) exif.setAttribute(tag, null)
         // XMP: separate-segment for JPEG/PNG cleared since 1.4.0; tag-700 cleared here too.

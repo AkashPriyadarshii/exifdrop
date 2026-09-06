@@ -8,7 +8,7 @@ Android files carry far more than content. Photos embed GPS, camera make/model, 
 
 ## Solution
 
-A zero-UI app that sits inside the Android share sheet. Share from any app → pick ExifDrop → it strips metadata, renames the file neutral, and passes a clean `content://` to the real destination. One tap, no screen, fully offline.
+An app that sits inside the Android share sheet. Share from any app → pick ExifDrop → it strips metadata, renames the file per the filename setting, and passes a clean `content://` to the real destination. Two taps total, no intermediate screen in the strip path, fully offline. A thin settings screen controls strip behavior (filename pattern, GPS, orientation, cache age).
 
 ## Users
 
@@ -18,18 +18,19 @@ FOSS/privacy-conscious Android users. The casual-photo crowd is served by native
 
 - Images: JPEG, PNG, WebP — lossless tag-wipe + WebP XMP chunk-strip.
 - PDF: trailer `/Info` + XMP stream removal — hand-rolled, no pdfbox-android.
-- Trampoline activity, zero-UI.
+- Trampoline activity — zero-UI strip path.
+- Compose settings shell: status hub + filename pattern / GPS / orientation / cache age, persisted.
 - FileProvider hand-off, `EXTRA_EXCLUDE_COMPONENTS` anti-recursion.
 - Orientation guard, neutral filenames, cache auto-purge.
 - Apache 2.0, GitHub Releases + F-Droid path.
 
 ## Scope — out (v0.1)
 
-- Play Store, root/invisible intercept, office docs, video, batch/scan, any UI.
+- Play Store, root/invisible intercept, office docs, video, batch/scan, strip history or visual diffs.
 
 ## Success criteria
 
-- Share an image or PDF → clean file lands at destination in one tap, no visible screen, no internet.
+- Share an image or PDF → clean file lands at destination in two taps (trampoline + destination), no internet.
 - GPS/XMP/ICC/timestamps verified gone (fixtures + tests); orientation preserved; filename neutral.
 - Installs on Android 7–16 (minSdk 24), no permissions, offline.
 
