@@ -27,3 +27,6 @@ session*.tmp
 # Local-only, never commit
 debug.keystore
 signing/
+
+# Local test fixtures
+site/.test/

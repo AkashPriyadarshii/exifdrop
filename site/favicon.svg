@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="ExifDrop">
+  <rect width="108" height="108" rx="22" fill="#FBF9F2"/>
+  <circle cx="54" cy="54" r="40" fill="#2E7D4F"/>
+  <path d="M54 26 C58 33 66 42 71 50 C76 58 79 65 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 65 32 58 37 50 C42 42 50 33 54 26 Z" fill="#FBF9F2"/>
+  <path d="M33 52 L75 52 L75 56 L33 56 Z" fill="#2A2620"/>
+  <path d="M42 64 L66 64 L66 66 L42 66 Z" fill="#2A2620"/>
+</svg>
