@@ -35,6 +35,16 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Pin the window to full screen. Share-target launches can otherwise be sized as a
+        // small floating bubble by some Android versions; MATCH_PARENT forces the real
+        // cover before any content draws. Must run before setContentView.
+        window.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+        )
+        // Kill the transition so the cover replaces the share sheet instantly instead of
+        // sliding in under it and reading as an undersized "floating" window.
+        overridePendingTransition(0, 0)
         // Opaque full-screen cover while we strip. Theme.Paper + a centered spinner so the
         // share-sheet pick doesn't flash the app behind or an empty white splash.
         window.setBackgroundDrawableResource(R.drawable.bg_trampoline)
