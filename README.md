@@ -64,6 +64,10 @@ Photo metadata removal is lossless: the stripper edits the binary metadata segme
 
 **Is it paid?** No. ExifDrop is free open-source software under Apache License 2.0.
 
+## Contributing
+
+Bug reports and PRs welcome. See [CONTRIBUTING](CONTRIBUTING.md) and [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md).
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
