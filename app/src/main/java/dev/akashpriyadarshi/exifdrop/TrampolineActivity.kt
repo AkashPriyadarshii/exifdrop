@@ -35,12 +35,12 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Pin the window to full screen. Share-target launches can otherwise be sized as a
-        // small floating bubble by some Android versions; MATCH_PARENT forces the real
-        // cover before any content draws. Must run before setContentView.
-        window.setLayout(
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+        // Draw over the WHOLE screen even when the WM hands a small freeform/"floating"
+        // rect. In freeform this is the onl lever that makes the cover fill the display:
+        // setLayout(MATCH_PARENT) only grows within the freeform bounds. Set before content.
+        window.addFlags(
+            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
         )
         // Kill the transition so the cover replaces the share sheet instantly instead of
         // sliding in under it and reading as an undersized "floating" window.
