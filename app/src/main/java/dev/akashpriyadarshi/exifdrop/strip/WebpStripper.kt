@@ -12,6 +12,9 @@ import java.io.OutputStream
  */
 object WebpStripper {
 
+    // Guard: a hostile or corrupt size field must not drive an allocation or read.
+    private const val MAX_CHUNK = 1 shl 28 // 256MB — no legitimate WebP chunk is bigger.
+
     // VP8X flags byte, from high bit: res res ICC alpha EXIF XMP anim res.
     private const val FLAG_EXIF = 0x08
     private const val FLAG_XMP = 0x04
@@ -30,6 +33,7 @@ object WebpStripper {
         while (pos + 8 <= raw.size) {
             val code = ascii(raw, pos)
             val size = le32(raw, pos + 4)
+            if (size < 0 || size > MAX_CHUNK) break // hostile size field: bail, keep what's valid
             val payload = pos + 8
             if (payload + size > raw.size) break // truncated tail: keep valid part
             when (code) {

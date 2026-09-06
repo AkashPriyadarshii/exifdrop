@@ -34,6 +34,20 @@ class StripperTest {
     }
 
     @Test
+    fun webp_hostileSizeField_bailsWithoutCrash() {
+        // Chunk size 0xFFFFFFFF (negative as Int): must not force a read past the buffer.
+        val hostile = "RIFF".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(0, 0, 0, 0) +
+            "WEBP".toByteArray(Charsets.ISO_8859_1) +
+            "XMP ".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(-1, -1, -1, -1) // 4 294 967 295
+        val out = java.io.ByteArrayOutputStream()
+        WebpStripper.strip(hostile.inputStream(), out)
+        // Should have produced a valid empty WebP (only RIFF+WEBP headers), no exception.
+        val s = out.toByteArray().toString(Charsets.ISO_8859_1)
+        assertTrue(s.startsWith("RIFF") && s.contains("WEBP"))
+    }
+
+    @Test
     fun webp_doesNotMatchNonWebp_throws() {
         val bad = "not a webp at all".toByteArray()
         org.junit.Assert.assertThrows(IllegalStateException::class.java) {
