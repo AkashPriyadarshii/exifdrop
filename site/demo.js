@@ -4,18 +4,24 @@
 (function () {
   'use strict';
 
-  var zone = document.getElementById('dropzone');
-  var input = document.getElementById('file');
-  var found = document.getElementById('found');
-  var foundList = document.getElementById('found-list');
-  var stripBtn = document.getElementById('strip-btn');
-  var result = document.getElementById('result');
-  var resultRemoved = document.getElementById('result-removed');
-  var resultNote = document.getElementById('result-note');
-  var downloadBtn = document.getElementById('download-btn');
-  var againBtns = document.querySelectorAll('#again-btn, #error-again');
-  var errBox = document.getElementById('error');
-  var errText = document.getElementById('error-text');
+  var zone = null, input = null, found = null, foundList = null, stripBtn = null;
+  var result = null, resultRemoved = null, resultNote = null, downloadBtn = null;
+  var againBtns = null, errBox = null, errText = null;
+  var doc = typeof document !== 'undefined' ? document : null;
+  if (doc) {
+    zone = doc.getElementById('dropzone');
+    input = doc.getElementById('file');
+    found = doc.getElementById('found');
+    foundList = doc.getElementById('found-list');
+    stripBtn = doc.getElementById('strip-btn');
+    result = doc.getElementById('result');
+    resultRemoved = doc.getElementById('result-removed');
+    resultNote = doc.getElementById('result-note');
+    downloadBtn = doc.getElementById('download-btn');
+    againBtns = doc.querySelectorAll('#again-btn, #error-again');
+    errBox = doc.getElementById('error');
+    errText = doc.getElementById('error-text');
+  }
 
   var fileBuffer = null;      /* last ArrayBuffer opened */
   var fileName = '';
@@ -52,7 +58,7 @@
         var e = off + 2 + i * 12;
         var tag = u16(e), type = u16(e + 2), cnt = u32(e + 4);
         var val = u32(e + 8);
-        entries.push({ tag: tag, type: type, count: cnt, val: val });
+        entries.push({ tag: tag, type: type, count: cnt, val: val, off: e });
       }
       var next = u32(off + 2 + n * 12);
       return { entries: entries, next: next };
@@ -66,19 +72,24 @@
     function entryValue(entry) {
       /* value is inline if typeSize*count <= 4 */
       var typeSize = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 9: 4, 10: 8 }[entry.type] || 1;
-      var dataOff = entry.type === 4 || entry.type === 3 ? tiffOff + 0 : 0;
+      /* Value is inline in the 4-byte field iff typeSize*count <= 4. */
       /* For string types (2 ASCII, 3 short pairs), do inline read if short. */
       if (entry.type === 2) {
-        var p = entry.count > 4 ? tiffOff + entry.val : entry.val;
+        var p = (typeSize * entry.count <= 4) ? (entry.off + 8) : tiffOff + entry.val;
         return r.strlen(p, Math.min(p + entry.count, u8.length));
       }
       if (entry.type === 3) {
-        if (entry.count <= 2) { return ('' + entry.val); }
+        var useShort = typeSize * entry.count <= 4;
+        if (useShort && (entry.count === 1 || entry.count === 2)) {
+          var vals = [];
+          for (var sIdx = 0; sIdx < entry.count; sIdx++) vals.push(u16(entry.off + 8 + sIdx * 2));
+          return vals.join(', ');
+        }
         var off3 = tiffOff + entry.val, s3 = '';
         for (var i = 0; i < Math.min(entry.count, 8); i++) s3 += String.fromCharCode(u8[off3 + i * 2]);
         return s3;
       }
-      if (entry.type === 4) return entry.val;
+      if (entry.type === 4) return entry.count === 1 ? entry.val : entry.val;
       if (entry.type === 5) {
         var off5 = tiffOff + entry.val; var nums = [];
         for (var j = 0; j < Math.min(entry.count, 3); j++) {
@@ -213,12 +224,22 @@
 
   /* ================= strip ================= */
 
-  /* JPEG: drop APP1(EXIF), APP2(ICC optional keep?), APP13(IPTC), keep APP0 JFIF. */
+  /* JPEG: drop APP1(EXIF), APP2(ICC), APP13(IPTC) and APP14(Adobe); keep APP0 JFIF.
+   * SOS has no length after the header, so stop advancing the scan there and
+   * carry the entropy + EOI through verbatim. */
   function stripJpeg(u8) {
     var out = [0xFF, 0xD8];
     var o = 2;
-    while (o + 4 <= u8.length) {
+    while (o + 2 < u8.length && u8[o] === 0xFF) {
       var m = u8[o + 1];
+      if (m === 0xD8 || m === 0xD9 || (m >= 0xD0 && m <= 0xD7)) { o++; continue; } /* SOI/EOI/RSTn */
+      if (m === 0xDA) { /* SOS: marker + length(2) + header; the rest is entropy. */
+        var sosLen = (u8[o + 2] << 8) | u8[o + 3];
+        var hEnd = o + 2 + sosLen;
+        for (var h = o; h < hEnd && h < u8.length; h++) out.push(u8[h]);
+        for (var e = hEnd; e < u8.length; e++) out.push(u8[e]); /* entropy + EOI verbatim */
+        break;
+      }
       var len = (u8[o + 2] << 8) | u8[o + 3];
       if (len < 2) break;
       var segEnd = o + 2 + len;
@@ -244,16 +265,24 @@
     return new Uint8Array(out);
   }
 
-  /* WebP: keep everything up to the first VP8 bitstream chunk (drops EXIF/XMP). */
+  /* WebP: rebuild the RIFF, dropping EXIF/XMP chunks (they precede the image
+   * data), then patch the RIFF size. ICCP is kept for color fidelity. */
   function stripWebp(u8) {
-    var o = 12, cut = u8.length;
+    var out = Array.prototype.slice.call(u8.subarray(0, 12)); /* 'RIFF' + size + 'WEBP' */
+    var o = 12, chunkBytes = 0;
     while (o + 8 <= u8.length) {
       var four = String.fromCharCode(u8[o]) + String.fromCharCode(u8[o + 1]) + String.fromCharCode(u8[o + 2]) + String.fromCharCode(u8[o + 3]);
       var size = (u8[o + 4] | (u8[o + 5] << 8) | (u8[o + 6] << 16) | (u8[o + 7] << 24)) >>> 0;
-      if (four === 'VP8 ' || four === 'VP8L' || four === 'VP8X') { cut = o; break; }
-      o += 8 + size + (size % 2);
+      var chunkLen = 8 + size + (size % 2);
+      if (four !== 'EXIF' && four !== 'XMP ') {
+        for (var i = o; i < o + chunkLen && i < u8.length; i++) out.push(u8[i]);
+        chunkBytes += chunkLen;
+      }
+      o += chunkLen;
     }
-    return u8.subarray(0, cut); /* returns Uint8Array view */
+    var riffLen = 4 + chunkBytes; /* 'WEBP' + chunks */
+    out[4] = riffLen & 0xFF; out[5] = (riffLen >> 8) & 0xFF; out[6] = (riffLen >> 16) & 0xFF; out[7] = (riffLen >> 24) & 0xFF;
+    return new Uint8Array(out);
   }
 
   function makeBlob(arr, type) { return new Blob([arr], { type: type }); }
@@ -336,6 +365,7 @@
   function showError(msg) { errText.textContent = msg; errBox.hidden = false; found.hidden = true; result.hidden = true; zone.hidden = true; }
   function reset() { found.hidden = true; result.hidden = true; errBox.hidden = true; zone.hidden = false; if (downloadBtn.href.startsWith('blob:')) URL.revokeObjectURL(downloadBtn.href); fileBuffer = null; }
 
+  if (doc && zone) {
   zone.addEventListener('click', function () { input.click(); });
   zone.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
   zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.style.borderColor = '#2E7D4F'; });
@@ -344,18 +374,30 @@
   input.addEventListener('change', function () { if (input.files[0]) handleFile(input.files[0]); });
   stripBtn.addEventListener('click', function (e) { e.preventDefault(); stripAndOffer(); });
   againBtns.forEach(function (b) { b.addEventListener('click', reset); });
+}
 
-  /* Self-check: build a minimal JPEG with an APP1 EXIF segment, strip it, assert EXIF gone + data kept. */
+  /* Self-check: build a realistic JPEG with EXIF APP1, strip it, assert APP1 gone + image data intact. */
   function selfCheck() {
-    /* SOI + APP1 length 12 ('Exif\0\0' + short TIFF) + SOS */
-    var seg = [0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x0C, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0xFF, 0xDA, 0xC0];
-    var u8 = new Uint8Array(seg);
-    var out = stripJpeg(u8);
-    var hasApp1 = false;
-    for (var i = 0; i < out.length; i++) { if (out[i] === 0xFF && out[i + 1] === 0xE1) { hasApp1 = true; break; } }
-    console.assert(!hasApp1, 'selfCheck: APP1 EXIF survived strip');
-    console.assert(out[out.length - 1] === 0xC0 || out[out.length - 1] === 0xDA, 'selfCheck: SOS lost');
-    if (hasApp1) console.error('selfCheck FAILED');
+    var seg = [0xFF, 0xD8];
+    var tiff = [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    var exif = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+    var app1Len = 2 + exif.length + tiff.length;
+    seg.push(0xFF, 0xE1, (app1Len >> 8) & 0xFF, app1Len & 0xFF);
+    seg = seg.concat(exif, tiff);
+    seg = seg.concat([0xFF, 0xDB, 0x00, 0x43, 0x00, 0x08, 0x06], [0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x80, 0x01, 0x00, 0x01, 0x01, 0x11, 0x00]);
+    seg = seg.concat([0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x3F, 0x00], [0x24, 0x1A, 0x42, 0xFF, 0x00, 0x10], [0xFF, 0xD9]);
+    var out = stripJpeg(new Uint8Array(seg));
+    var hasApp1 = false, sawSos = false;
+    for (var i = 0; i + 1 < out.length; i++) {
+      if (out[i] === 0xFF && out[i + 1] === 0xE1) { hasApp1 = true; break; }
+      if (out[i] === 0xFF && out[i + 1] === 0xDA) sawSos = true;
+    }
+    if (hasApp1 || !sawSos) throw new Error('selfCheck FAILED: APP1 leaked or SOS lost');
   }
   selfCheck();
+
+  /* Node: expose pure functions for the local self-check (.test/strip.test.js). */
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { readJpeg: readJpeg, readPng: readPng, readWebp: readWebp, stripJpeg: stripJpeg, stripPng: stripPng, stripWebp: stripWebp };
+  }
 })();
