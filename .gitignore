@@ -1,0 +1,26 @@
+# Android / Gradle
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.key
+*.jks
+keystore.properties
+
+# Kotlin
+.kotlin/
+
+# Misc
+*.log
+session*.tmp
+
+# Local-only, never commit
+debug.keystore
+signing/
