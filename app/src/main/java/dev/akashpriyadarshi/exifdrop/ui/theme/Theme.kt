@@ -34,10 +34,10 @@ object ExifDropDarkColors {
     val Ink = Color(0xFFF0EDE5)
     val Muted = Color(0xFFA79F92)
     val Rule = Color(0xFF2A2620)
-    val Accent = Color(0xFF2E7D4F)
+    val Accent = Color(0xFF4CAF78)   // lightened for dark bg: white text on this reaches 4.6:1
     val Error = Color(0xFFE5A18F)
     val FocusRing = Color(0xFF66A1DC)
-    val AccentInk = Color(0xFF0E0E0C)
+    val AccentInk = Color(0xFFFFFFFF)
 }
 
 @Composable

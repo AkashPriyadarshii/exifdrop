@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Launcher: Material3, DayNight. Tokens live in Compose (ui/theme/Theme.kt). -->
+    <!-- Launcher: Material3, DayNight, no ActionBar. Tokens live in Compose (ui/theme/Theme.kt).
+         White bg only in light mode; values-night overrides the flash. -->
     <style name="Theme.ExifDrop" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/exifdrop_bg</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 

@@ -11,14 +11,15 @@ class ExifDropApp : Application() {
         purgeCache()
     }
 
-    /** Drop stale (>24h) and oversized (>64MB) cleaned files on every cold start. */
+    /** Drop stale (> user's cache age) and oversized (>64MB) cleaned files on cold start. */
     private fun purgeCache() {
         val dir = File(cacheDir, "cleaned")
         val files = dir.listFiles() ?: return
         val now = System.currentTimeMillis()
+        val maxAge = Prefs.cacheAgeDays(this) * 24L * 60 * 60 * 1000
         var total = 0L
         for (f in files) {
-            if (now - f.lastModified() > MAX_AGE_MILLIS || f.length() == 0L) {
+            if (now - f.lastModified() > maxAge || f.length() == 0L) {
                 f.delete()
             } else {
                 total += f.length()
@@ -36,7 +37,6 @@ class ExifDropApp : Application() {
     }
 
     private companion object {
-        const val MAX_AGE_MILLIS = 24L * 60 * 60 * 1000
         const val MAX_TOTAL_BYTES = 64L * 1024 * 1024
     }
 }

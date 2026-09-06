@@ -1,6 +1,7 @@
 package dev.akashpriyadarshi.exifdrop
 
 import dev.akashpriyadarshi.exifdrop.strip.PdfStripper
+import dev.akashpriyadarshi.exifdrop.strip.Renamer
 import dev.akashpriyadarshi.exifdrop.strip.WebpStripper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -136,5 +137,35 @@ class StripperTest {
         // /Length and /Filter are neutralized too, so the residue can't be misread as flate.
         assertFalse(s.contains("/Length"))
         assertFalse(s.contains("/Filter"))
+    }
+
+    // -- Renamer (traversal guard) -------------------------------------------
+    @Test
+    fun renamer_traversalPath_becomesSafeStem() {
+        // A hostile provider can send DISPLAY_NAME with ../.. to escape cache/cleaned/.
+        val safe = Renamer.name("../../../shared_prefs/app.xml", byteArrayOf(1, 2, 3), "original")
+        // The output is one bare filename — no separators or parent traversal survives.
+        assertFalse(safe.contains("/"))
+        assertFalse(safe.contains(".."))
+        assertTrue(safe.endsWith(".xml"))
+    }
+
+    @Test
+    fun renamer_neutral_stillHashes() {
+        val a = Renamer.name("IMG_20250115_140233.jpg", byteArrayOf(1, 2, 3), "neutral")
+        assertTrue(a.startsWith("share_"))
+        assertTrue(a.endsWith(".jpg"))
+        // Equal content → equal name (cache hit).
+        assertEquals(a, Renamer.name("whatever.jpg", byteArrayOf(1, 2, 3), "neutral"))
+    }
+
+    @Test
+    fun renamer_dotName_cannotBeParent() {
+        // "..", ".", stores become empty → fall back to hash (never a parent handle).
+        for (hostile in listOf("...jpg", "..jpg", ".jpg")) {
+            val out = Renamer.name(hostile, byteArrayOf(1, 2, 3), "original")
+            assertTrue(out.startsWith("share_") || out.endsWith(".jpg"))
+            assertFalse(out == "..jpg" || out == ".jpg" || out == "...jpg")
+        }
     }
 }

@@ -74,16 +74,13 @@ object PdfStripper {
                 val k = str.indexOf(key, start)
                 if (k in start until dictEnd) {
                     var vEnd = k + key.length
-                    // /Filter's VALUE must die too, or a strict viewer tries to inflate the
-                    // space-blanked payload (Z_DATA_ERROR). Value is a name, a number, or [ ... ].
-                    if (key == "/Filter") {
-                        while (vEnd < dictEnd && chars[vEnd].isWhitespace()) vEnd++
-                        if (vEnd < dictEnd && chars[vEnd] == '[') {
-                            while (vEnd < dictEnd && chars[vEnd] != ']') vEnd++
-                            if (vEnd < dictEnd) vEnd++
-                        } else {
-                            while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
-                        }
+                    // Both /Length and /Filter VALUES must die too, or a strict viewer tries to
+                    // inflate the space-blanked payload (Z_DATA_ERROR) / mis-reads the dict.
+                    // Value is a name, a number, or [ ... ].
+                    while (vEnd < dictEnd && chars[vEnd].isWhitespace()) vEnd++
+                    if (vEnd < dictEnd && chars[vEnd] == '[') {
+                        while (vEnd < dictEnd && chars[vEnd] != ']') vEnd++
+                        if (vEnd < dictEnd) vEnd++
                     } else {
                         while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
                     }

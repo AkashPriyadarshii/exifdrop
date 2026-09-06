@@ -43,7 +43,7 @@ object ImageStripper {
             // Read as raw string: getAttributeInt's default would fabricate ORIENTATION_NORMAL
             // onto files that never had EXIF, injecting a synthesized APP1 into clean output.
             val orientation = exif.getAttribute(ExifInterface.TAG_ORIENTATION)
-            wipe(exif, stripGps)
+            wipe(exif, stripGps, !keepOrientation)
             // Re-apply orientation only if the source actually carried one AND the user kept it.
             if (keepOrientation && orientation != null && orientation != ExifInterface.ORIENTATION_UNDEFINED.toString()) {
                 exif.setAttribute(ExifInterface.TAG_ORIENTATION, orientation)
@@ -56,9 +56,11 @@ object ImageStripper {
     }
 
     /** Drop every EXIF tag the library knows, plus XMP (both segments) and ICC white-balance cruft. */
-    private fun wipe(exif: ExifInterface, stripGps: Boolean) {
+    private fun wipe(exif: ExifInterface, stripGps: Boolean, stripOrientation: Boolean) {
         // Wipe all known GPS (unless the user opted to keep it).
         if (stripGps) for (tag in GPS_TAGS) exif.setAttribute(tag, null)
+        // Orientation lives in IFD0; only cleared when "keep orientation" is off, else it must survive.
+        if (stripOrientation) exif.setAttribute(ExifInterface.TAG_ORIENTATION, null)
         // Wipe camera/make/software/date-time.
         for (tag in INFO_TAGS) exif.setAttribute(tag, null)
         // XMP: separate-segment for JPEG/PNG cleared since 1.4.0; tag-700 cleared here too.

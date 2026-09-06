@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warm paper (matches ExifDropColors.Paper) so the launch window doesn't white-flash
+         before Compose paints its theme. values-night swaps to the dark paper. -->
+    <color name="exifdrop_bg">#FBF9F2</color>
+</resources>

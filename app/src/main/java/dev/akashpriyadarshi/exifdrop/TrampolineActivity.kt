@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Parcelable
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.core.content.FileProvider
@@ -27,18 +26,23 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        purgeCache()
         val cleaned = ArrayList<Clean>()
         try {
             val clip = intent.clipData
             if (clip != null) {
                 for (i in 0 until clip.itemCount) {
                     val uri = clip.getItemAt(i)?.uri ?: continue
+                    if (isOwnProvider(uri)) continue // OEM sheets may ignore EXCLUDE_COMPONENTS: never re-strip our own output
                     cleaned.addIfClean(uri)
                 }
             } else if (intent.hasExtra(Intent.EXTRA_STREAM)) {
-                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-                ?.let { cleaned.addIfClean(it) }
+                // No clipData: single URIs only. A SEND_MULTIPLE without clipData carries an
+                // ArrayList — getParcelableExtra(Uri::class) returns null there, which is correct:
+                // we refuse rather than guess (dropping is safe, leaking is not).
+                if (intent.action == Intent.ACTION_SEND) {
+                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                        ?.let { if (!isOwnProvider(it)) cleaned.addIfClean(it) }
+                }
             }
         } catch (e: Throwable) {
             // Nothing to hand off; user's share dies here rather than leak metadata.
@@ -75,7 +79,7 @@ class TrampolineActivity : ComponentActivity() {
             val size = try {
                 contentResolver.openAssetFileDescriptor(src, "r")?.use { it.length }
             } catch (e: IOException) { null } // provider doesn't expose length: skip the cap
-            if (size != null && size > 64L * 1024 * 1024) return null
+            if (size != null && size > 0 && size > 64L * 1024 * 1024) return null
             val bytes = contentResolver.openInputStream(src)?.use { input ->
                 val buf = ByteArrayOutputStream()
                 when (mime) {
@@ -102,13 +106,8 @@ class TrampolineActivity : ComponentActivity() {
         }
     }
 
-    /** Delete cleaned files older than the configured cache age. Call on launch. */
-    private fun purgeCache() {
-        val dir = java.io.File(cacheDir, "cleaned")
-        if (!dir.isDirectory) return
-        val cutoff = System.currentTimeMillis() - Prefs.cacheAgeDays(this) * 24L * 60 * 60 * 1000
-        dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
-    }
+    /** True when the URI comes from our own provider — never re-process it. */
+    private fun isOwnProvider(uri: Uri): Boolean = uri.authority == "$packageName.fileprovider"
 
     private fun queryName(uri: Uri): String? =
         contentResolver.query(uri, null, null, null, null)?.use { c ->
@@ -122,11 +121,12 @@ class TrampolineActivity : ComponentActivity() {
         val uris = cleaned.map { it.uri }
         val send = Intent(if (uris.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
             @Suppress("DEPRECATION") type = shareType
-            // Single → Uri; multiple → ArrayList<Parcelable> (java.util.ArrayList isn't Parcelable itself).
+            // Single → Uri; multiple → Parcelable-typed ArrayList. putExtra(String, Serializable)
+            // would mark the list Serializable and then Java-serialize each Uri at IPC → crash.
             if (uris.size == 1) {
                 putExtra(Intent.EXTRA_STREAM, uris[0])
             } else {
-                putExtra(Intent.EXTRA_STREAM, ArrayList<Parcelable>(uris))
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
             }
             // clipData is how ActivityManagerService derives URI grants for chooser-based
             // shares: every URI must be in it or recipients only get read on the first.
