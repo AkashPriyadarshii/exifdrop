@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy (API 24/25) launcher icon: same droplet mark on warm paper. Vector drawable
+     works from API 24; adaptive icons take over on API 26+. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Paper background -->
+    <path android:fillColor="#FBF9F2" android:pathData="M0 0 L108 0 L108 108 L0 108 Z"/>
+
+    <!-- Droplet -->
+    <path
+        android:fillColor="#2E7D4F"
+        android:pathData="M54 24 C58 31 66 41 71 49 C76 57 79 64 79 71 C79 85 68 94 54 94 C40 94 29 85 29 71 C29 64 32 57 37 49 C42 41 50 31 54 24 Z"/>
+    <path
+        android:fillColor="#FBF9F2"
+        android:pathData="M54 40 C57 44 61 49 63 53 C65 57 66 60 66 63 C66 70 61 75 54 75 C47 75 42 70 42 63 C42 60 43 57 45 53 C47 49 51 44 54 40 Z"/>
+    <path android:fillColor="#2A2620" android:pathData="M33 52 L75 52 L75 56 L33 56 Z"/>
+    <path android:fillColor="#2A2620" android:pathData="M42 64 L66 64 L66 66 L42 66 Z"/>
+</vector>

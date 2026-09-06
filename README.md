@@ -5,6 +5,15 @@
 -->
 # ExifDrop: Android share-sheet EXIF & GPS metadata stripper
 
+<div align="center">
+  <img src="docs/icon.png" alt="ExifDrop app icon" width="120">
+  <br>
+  <a href="releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/AkashPriyadarshii/exifdrop?label=release&color=2E7D4F"></a>
+  <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-2E7D4F"></a>
+  <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-2E7D4F">
+  <img alt="Offline" src="https://img.shields.io/badge/offline-no%20network-6E675C">
+</div>
+
 Strip EXIF, GPS location, camera data, timestamps and XMP from photos and PDFs at the moment you share them. On Android, share any file to WhatsApp, email or Telegram, pick ExifDrop in the share sheet, and a clean, neutrally-named copy hands off to your real destination. Android 7.0+ (API 24). Fully offline, no INTERNET permission, Apache 2.0.
 
 ## Why

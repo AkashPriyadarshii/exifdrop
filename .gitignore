@@ -14,6 +14,7 @@ captures/
 *.jks
 *.p12
 *.keystore
+*.idsig
 keystore.properties
 
 # Kotlin

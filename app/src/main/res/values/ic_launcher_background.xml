@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warm paper, matches ExifDropColors.Paper (#FBF9F2). Drops into the dark-theme
+         adaptive background? No: adaptive icons are static color; warm paper reads the
+         Austere light register and stays. -->
+    <color name="ic_launcher_background">#FBF9F2</color>
+</resources>
