@@ -12,6 +12,12 @@
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-2E7D4F"></a>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-2E7D4F">
   <img alt="Offline" src="https://img.shields.io/badge/offline-no%20network-6E675C">
+  <br>
+  <a href="https://akashpriyadarshii.github.io/exifdrop/">Website</a>
+  &#183;
+  <a href="https://github.com/AkashPriyadarshii/exifdrop/releases/download/v0.1/exifdrop-v0.1-signed.apk">Download APK</a>
+  &#183;
+  <a href="https://github.com/AkashPriyadarshii/exifdrop">GitHub</a>
 </div>
 
 Strip EXIF, GPS location, camera data, timestamps and XMP from photos and PDFs at the moment you share them. On Android, share any file to WhatsApp, email or Telegram, pick ExifDrop in the share sheet, and a clean, neutrally-named copy hands off to your real destination. Android 7.0+ (API 24). Fully offline, no INTERNET permission, Apache 2.0.
@@ -32,7 +38,9 @@ Most photo metadata removers make you open an app, pick the file, strip, then st
 
 ## Install
 
-Grab the APK from [Releases](releases/latest) and install on Android 7.0+ (API 24). No permissions requested at runtime; the file is read from and written to app-private storage via `ContentResolver`.
+Grab the APK from [Releases](releases/latest) or [download `exifdrop-v0.1-signed.apk` directly](https://github.com/AkashPriyadarshii/exifdrop/releases/download/v0.1/exifdrop-v0.1-signed.apk) and install on Android 7.0+ (API 24). No permissions requested at runtime; the file is read from and written to app-private storage via `ContentResolver`.
+
+See it in action at the [ExifDrop website](https://akashpriyadarshii.github.io/exifdrop/) (includes a live in-browser demo: pick a photo, see what a share would leak, strip it).
 
 > F-Droid submission was decided out of scope for v0.1.
 
@@ -80,3 +88,7 @@ Bug reports and PRs welcome. See [CONTRIBUTING](CONTRIBUTING.md) and [CODE_OF_CO
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+---
+
+**Author:** Akash Priyadarshi ([GitHub](https://github.com/AkashPriyadarshii), [Portfolio](https://akashpriyadarshi.vercel.app), [LinkedIn](https://linkedin.com/in/akash-priyadarshi-1aa51b37a), [Resume](https://akashpriyadarshii.github.io/Resume/)) &#183; Patna, Bihar, India
