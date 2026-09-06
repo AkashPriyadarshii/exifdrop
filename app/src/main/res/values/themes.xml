@@ -7,13 +7,12 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Fully transparent, no window frame, no visible UI. The activity inflates nothing. -->
-    <style name="Theme.ExifDrop.Transparent" parent="android:Theme.Translucent.NoTitleBar">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
+    <!-- Covers the whole screen during the strip before the destination chooser.
+         Opaque paper so picking ExifDrop doesn't flash the app behind or the launcher. -->
+    <style name="Theme.ExifDrop.Trampoline" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/exifdrop_bg</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

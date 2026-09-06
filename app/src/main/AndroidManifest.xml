@@ -31,7 +31,8 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.ExifDrop.Transparent"
+            android:theme="@style/Theme.ExifDrop.Trampoline"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:enableOnBackInvokedCallback="false">
 
             <intent-filter>

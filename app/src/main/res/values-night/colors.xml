@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="exifdrop_bg">#12100E</color>
+    <color name="trampoline_fg">#EDE8DC</color>
 </resources>

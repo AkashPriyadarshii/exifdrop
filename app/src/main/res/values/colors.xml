@@ -3,4 +3,6 @@
     <!-- Warm paper (matches ExifDropColors.Paper) so the launch window doesn't white-flash
          before Compose paints its theme. values-night swaps to the dark paper. -->
     <color name="exifdrop_bg">#FBF9F2</color>
+    <!-- Foreground for the trampoline cover (light) -->
+    <color name="trampoline_fg">#2A2620</color>
 </resources>

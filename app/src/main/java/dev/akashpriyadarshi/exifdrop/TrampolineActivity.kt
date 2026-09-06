@@ -3,9 +3,17 @@ package dev.akashpriyadarshi.exifdrop
 import android.content.ClipData
 import android.content.ComponentName
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
@@ -14,6 +22,7 @@ import dev.akashpriyadarshi.exifdrop.strip.PdfStripper
 import dev.akashpriyadarshi.exifdrop.strip.Renamer
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.util.concurrent.Executors
 
 /**
  * Zero-UI share trampoline. Target of the share sheet; never rendered.
@@ -26,42 +35,96 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val cleaned = ArrayList<Clean>()
+        // Opaque full-screen cover while we strip. Theme.Paper + a centered spinner so the
+        // share-sheet pick doesn't flash the app behind or an empty white splash.
+        window.setBackgroundDrawableResource(R.drawable.bg_trampoline)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
+            window.navigationBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
+            val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                window.decorView.systemUiVisibility = if (night) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            }
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(ContextCompat.getColor(this@TrampolineActivity, R.color.exifdrop_bg))
+        }
+        val spinner = ProgressBar(this).apply {
+            id = android.R.id.progress
+        }
+        val label = TextView(this).apply {
+            text = "Stripping metadata…"
+            setTextColor(ContextCompat.getColor(this@TrampolineActivity, R.color.trampoline_fg))
+            textSize = 16f
+        }
+        root.apply {
+            addView(spinner, LinearLayout.LayoutParams(64.dp(), 64.dp()))
+            addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 16.dp() })
+        }
+        setContentView(root)
+
+        val sources = collectSources()
+        if (sources.isEmpty()) {
+            Toast.makeText(this, "Nothing to strip from this share.", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        // Strip on a background thread so the cover never janks; then hand off.
+        val exec = Executors.newSingleThreadExecutor()
+        exec.execute {
+            val cleaned = ArrayList<Clean>()
+            var skipped = 0
+            for (src in sources) {
+                try {
+                    prepare(src)?.let { cleaned.add(it) } ?: skipped++
+                } catch (e: Throwable) {
+                    skipped++ // corrupt/hostile single file: drop it, keep the rest
+                }
+            }
+            runOnUiThread {
+                exec.shutdown()
+                if (cleaned.isEmpty()) {
+                    Toast.makeText(this@TrampolineActivity,
+                        if (sources.size > 1) "None of those files could be stripped." else "Couldn't strip that file.",
+                        Toast.LENGTH_SHORT).show()
+                    finish()
+                } else {
+                    if (skipped > 0) {
+                        Toast.makeText(this@TrampolineActivity,
+                            "Skipped $skipped file${if (skipped > 1) "s" else ""} (corrupt or too large).",
+                            Toast.LENGTH_SHORT).show()
+                    }
+                    startActivity(destination(cleaned))
+                    finish()
+                }
+            }
+        }
+    }
+
+    private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+
+    /** Pull source URIs from the share intent: clipData (multi/single) or EXTRA_STREAM (single SEND). */
+    private fun collectSources(): List<Uri> {
+        val out = ArrayList<Uri>()
         try {
             val clip = intent.clipData
             if (clip != null) {
                 for (i in 0 until clip.itemCount) {
                     val uri = clip.getItemAt(i)?.uri ?: continue
-                    if (isOwnProvider(uri)) continue // OEM sheets may ignore EXCLUDE_COMPONENTS: never re-strip our own output
-                    cleaned.addIfClean(uri)
+                    if (!isOwnProvider(uri)) out.add(uri)
                 }
-            } else if (intent.hasExtra(Intent.EXTRA_STREAM)) {
-                // No clipData: single URIs only. A SEND_MULTIPLE without clipData carries an
-                // ArrayList — getParcelableExtra(Uri::class) returns null there, which is correct:
-                // we refuse rather than guess (dropping is safe, leaking is not).
-                if (intent.action == Intent.ACTION_SEND) {
-                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-                        ?.let { if (!isOwnProvider(it)) cleaned.addIfClean(it) }
-                }
+            } else if (intent.action == Intent.ACTION_SEND && intent.hasExtra(Intent.EXTRA_STREAM)) {
+                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                    ?.let { if (!isOwnProvider(it)) out.add(it) }
             }
         } catch (e: Throwable) {
-            // Nothing to hand off; user's share dies here rather than leak metadata.
+            // Nothing to hand off; the share dies here rather than leak metadata.
         }
-        if (cleaned.isEmpty()) {
-            finish()
-            return
-        }
-        startActivity(destination(cleaned))
-        finish()
-    }
-
-    /** Strip + cache one source; on any per-file failure, skip it, keep the batch alive. */
-    private fun ArrayList<Clean>.addIfClean(src: Uri) {
-        try {
-            prepare(src)?.let { add(it) }
-        } catch (e: Throwable) {
-            // corrupt/hostile single file: drop it, keep the rest
-        }
+        return out
     }
 
     /** One stripped file ready to hand off. */
@@ -117,7 +180,14 @@ class TrampolineActivity : ComponentActivity() {
 
     private fun destination(cleaned: List<Clean>): Intent {
         val mimes = cleaned.map { it.mime }
-        val shareType = if (mimes.all { it.startsWith("image/") }) "image/*" else "application/pdf"
+        // Honest type: all-images and all-pdf keep their narrow type so narrow receivers appear.
+        // A mixed batch (photo + PDF) must NOT claim application/pdf — the image URI would fail
+        // to open. Fall back to */* so any broad receiver can take the whole batch.
+        val shareType = when {
+            mimes.all { it.startsWith("image/") } -> "image/*"
+            mimes.all { it == "application/pdf" } -> "application/pdf"
+            else -> "*/*"
+        }
         val uris = cleaned.map { it.uri }
         val send = Intent(if (uris.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
             @Suppress("DEPRECATION") type = shareType

@@ -158,10 +158,10 @@ private fun SettingsList(context: Context) {
                 onSelect = { cacheDays = it.toInt(); Prefs.setCacheAgeDays(context, it.toInt()) },
             )
         }
-        ToggleRow("Strip GPS", "remove location tags · JPEG/PNG", stripGps) {
+        ToggleRow("Strip GPS", "remove location tags · JPEG/PNG, WebP always stripped", stripGps) {
             stripGps = it; Prefs.setStripGps(context, it)
         }
-        ToggleRow("Keep orientation", "photos stay upright · JPEG/PNG", keepOrient) {
+        ToggleRow("Keep orientation", "photos stay upright · JPEG/PNG, WebP always stripped", keepOrient) {
             keepOrient = it; Prefs.setKeepOrientation(context, it)
         }
     }
