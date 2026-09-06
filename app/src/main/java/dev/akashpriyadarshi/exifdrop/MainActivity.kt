@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.HorizontalDivider
@@ -159,10 +158,10 @@ private fun SettingsList(context: Context) {
                 onSelect = { cacheDays = it.toInt(); Prefs.setCacheAgeDays(context, it.toInt()) },
             )
         }
-        ToggleRow("Strip GPS", "remove location tags", stripGps) {
+        ToggleRow("Strip GPS", "remove location tags · JPEG/PNG", stripGps) {
             stripGps = it; Prefs.setStripGps(context, it)
         }
-        ToggleRow("Keep orientation", "photos stay rotated correctly", keepOrient) {
+        ToggleRow("Keep orientation", "photos stay upright · JPEG/PNG", keepOrient) {
             keepOrient = it; Prefs.setKeepOrientation(context, it)
         }
     }
