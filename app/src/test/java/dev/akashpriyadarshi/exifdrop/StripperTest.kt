@@ -48,6 +48,18 @@ class StripperTest {
     }
 
     @Test
+    fun webp_zeroSizeVp8x_doesNotCrash() {
+        // size-0 VP8X: the strip branch must not read raw[payload+1] of length -1.
+        val zero = "RIFF".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(0, 0, 0, 0) +
+            "WEBP".toByteArray(Charsets.ISO_8859_1) +
+            "VP8X".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(0, 0, 0, 0)
+        val out = java.io.ByteArrayOutputStream()
+        WebpStripper.strip(zero.inputStream(), out)
+        val s = out.toByteArray().toString(Charsets.ISO_8859_1)
+        assertTrue(s.startsWith("RIFF") && s.contains("WEBP"))
+    }
+
+    @Test
     fun webp_doesNotMatchNonWebp_throws() {
         val bad = "not a webp at all".toByteArray()
         org.junit.Assert.assertThrows(IllegalStateException::class.java) {
@@ -67,6 +79,25 @@ class StripperTest {
             "startxref\n0\n%%EOF\n"
 
     @Test
+    fun pdf_unterminatedLiteral_doesNotWipeTail() {
+        // /Info with an unclosed ( : findDictEnd must not scan to EOF and blank the whole rest.
+        val pdf = "%PDF-1.4\n" +
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+            "2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n" +
+            "3 0 obj\n<< /Title (unterminated /Author (Still Here) >>\nendobj\n" +
+            "trailer\n<< /Root 1 0 R /Info 3 0 R >>\n" +
+            "startxref\n0\n%%EOF\n"
+        val out = java.io.ByteArrayOutputStream()
+        PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), out)
+        val s = out.toByteArray().toString(Charsets.ISO_8859_1)
+        // Object 2's content stream must survive — not blanked all the way to EOF.
+        assertTrue(s.contains("/Type /Catalog"))
+        assertTrue(s.contains("/Kids []"))
+        // /Info partially scrubbed at worst; nothing past the dict is destroyed.
+        assertFalse(s.contains("/Title (unterminated"))
+    }
+
+    @Test
     fun pdf_scrubsInfoDict() {
         val out = java.io.ByteArrayOutputStream()
         PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), out)
@@ -83,6 +114,8 @@ class StripperTest {
         PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), out)
         val s = out.toByteArray().toString(Charsets.ISO_8859_1)
         assertFalse(s.contains("evil"))
-        assertTrue(s.contains("/Length 9")) // length token preserved
+        // /Length and /Filter are neutralized too, so the residue can't be misread as flate.
+        assertFalse(s.contains("/Length"))
+        assertFalse(s.contains("/Filter"))
     }
 }

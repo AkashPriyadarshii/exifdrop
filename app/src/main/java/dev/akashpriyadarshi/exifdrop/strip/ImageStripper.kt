@@ -19,8 +19,7 @@ import java.io.OutputStream
 object ImageStripper {
 
     /**
-     * Wipe metadata from [input] into [out]. Returns nothing; caller owns stream lifecycle.
-     * [orientation] is captured by [rememberOrientation] before wiping and re-applied so
+     * Wipe all EXIF/XMP/IPTC metadata from [input] into [out]. Orientation is preserved so
      * the receiver doesn't render the photo sideways.
      */
     @Throws(IOException::class)
@@ -33,7 +32,7 @@ object ImageStripper {
         // ExifInterface needs a seekable path, not a stream — copy to a temp file.
         val tmp = java.io.File.createTempFile("exifdrop_in", null)
         try {
-            input.use { it.copyTo(tmp.outputStream()) }
+            input.use { it.copyTo(tmp.outputStream().buffered()) }
             val exif = ExifInterface(tmp.absolutePath)
             val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
             wipe(exif)

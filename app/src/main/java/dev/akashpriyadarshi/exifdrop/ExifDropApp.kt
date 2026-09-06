@@ -26,7 +26,7 @@ class ExifDropApp : Application() {
         }
         if (total > MAX_TOTAL_BYTES) {
             files.filter { it.exists() }
-                .sortedByDescending { it.lastModified() }
+                .sortedBy { it.lastModified() } // oldest first, keep the freshest
                 .forEach { f ->
                     total -= f.length()
                     f.delete()

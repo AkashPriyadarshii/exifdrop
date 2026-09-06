@@ -86,7 +86,7 @@ class TrampolineActivity : ComponentActivity() {
         val mimes = uris.mapNotNull { contentResolver.getType(it) }
         val type = if (mimes.all { it.startsWith("image/") }) "image/*" else "application/pdf"
         val send =
-            if (type == "application/pdf" || uris.size == 1) {
+            if (uris.size == 1) {
                 Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
             } else {
                 Intent(Intent.ACTION_SEND_MULTIPLE).apply {

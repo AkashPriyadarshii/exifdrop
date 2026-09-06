@@ -54,6 +54,19 @@ object PdfStripper {
         if (end < 0) return
         var contentStart = str.indexOf("stream", start)
         if (contentStart < 0 || contentStart > end) return
+        // Neutralize /Filter and /Length in the stream dict so a strict viewer doesn't
+        // misinterpret the now-space payload as flate or expect the old byte count.
+        val dictEnd = str.indexOf("stream", start) - 3 // "<<"...">> stream"
+        if (dictEnd > start) {
+            for (key in arrayOf("/Length", "/Filter")) {
+                val k = str.indexOf(key, start)
+                if (k in start until dictEnd) {
+                    var vEnd = k + key.length
+                    while (vEnd < dictEnd && !chars[vEnd].isWhitespace()) vEnd++
+                    for (i in k until vEnd) chars[i] = ' '
+                }
+            }
+        }
         // Advance past "stream" + EOL to the payload's first byte.
         contentStart += "stream".length
         while (contentStart < end && (chars[contentStart] == '\r' || chars[contentStart] == '\n')) contentStart++
@@ -86,7 +99,7 @@ object PdfStripper {
                 else -> i++
             }
         }
-        return c.size - 1
+        return -1 // no closing >> : treat as no valid dict, don't wipe to EOF
     }
 
     /** Skip a PDF literal string `(…)`, honoring `\(` `\)` `\\`. Returns char after `)`. */

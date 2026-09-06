@@ -36,14 +36,17 @@ object WebpStripper {
             if (size < 0 || size > MAX_CHUNK) break // hostile size field: bail, keep what's valid
             val payload = pos + 8
             if (payload + size > raw.size) break // truncated tail: keep valid part
+            if (size == 0 && (code == "XMP " || code == "EXIF")) continue
             when (code) {
                 "XMP ", "EXIF" -> { /* drop */ }
                 "VP8X" -> {
                     body.write(codeBytes(code))
                     body.write(le32(size))
-                    body.write(raw[payload].toInt() and CLEAR)
-                    body.write(raw, payload + 1, size - 1)
-                    if (size and 1 == 1) body.write(0)
+                    if (size > 0) {
+                        body.write(raw[payload].toInt() and CLEAR)
+                        body.write(raw, payload + 1, size - 1)
+                        if (size and 1 == 1) body.write(0)
+                    }
                 }
                 else -> {
                     body.write(codeBytes(code))
