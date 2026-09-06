@@ -3,14 +3,10 @@ package dev.akashpriyadarshi.exifdrop
 import android.content.ClipData
 import android.content.ComponentName
 import android.content.Intent
-import android.content.res.Configuration
-import android.graphics.Rect
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
-import android.view.Window
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -39,28 +35,12 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Freeform/desktop windowing (device-wide, affects every app) hands this a small
-        // float. Extend the DRAW past the frame so the cover fills the display even when the
-        // WM gives a freeform rect; translucent theme keeps the frame out of freeform where
-        // the OEM honors it.
-        window.addFlags(
-            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                    or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-        )
-        // Kill the transition so the cover replaces the share sheet instantly instead of
-        // sliding in under it and reading as an undersized "floating" window.
+        // Kill the transition so the cover replaces the share sheet instantly.
         overridePendingTransition(0, 0)
-        // Opaque full-screen cover while we strip. Theme.Paper + a centered spinner so the
-        // share-sheet pick doesn't flash the app behind or an empty white splash.
+        // Full-screen cover while we strip, so the pick never flashes the app behind.
         window.setBackgroundDrawableResource(R.drawable.bg_trampoline)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
-            window.navigationBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
-            val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                window.decorView.systemUiVisibility = if (night) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            }
-        }
+        window.statusBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
+        window.navigationBarColor = ContextCompat.getColor(this, R.color.exifdrop_bg)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -80,12 +60,6 @@ class TrampolineActivity : ComponentActivity() {
             addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 16.dp() })
         }
         setContentView(root)
-        // Freeform/desktop windowing can launch this as a floating window with a caption
-        // (3-dot menu with full screen / split / minimise / close). Declarative opt-outs
-        // (resizeableActivity=false, translucent) are bypassed when the system forces
-        // resizable, so expand the window to the full display ourselves — the same thing
-        // the caption's "full screen" button does. Runs post-layout, no-op if unavailable.
-        window.decorView.post { expandFreeformToFullScreen() }
 
         val sources = collectSources()
         if (sources.isEmpty()) {
@@ -145,22 +119,6 @@ class TrampolineActivity : ComponentActivity() {
     }
 
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
-
-    /**
-     * If the OEM places this trampoline in a freeform/floating window (the 3-dot caption
-     * bar with full screen / split / minimise / close), expand its bounds to the whole
-     * display. Hidden API Window.setBounds(Rect) is the same call the caption's "full
-     * screen" button makes; guard it so a missing method is a no-op, never a crash.
-     */
-    private fun expandFreeformToFullScreen() {
-        try {
-            val m = Window::class.java.getMethod("setBounds", Rect::class.java)
-            val dm = resources.displayMetrics
-            m.invoke(window, Rect(0, 0, dm.widthPixels, dm.heightPixels))
-        } catch (e: Throwable) {
-            // Freeform not active or method absent: nothing to do.
-        }
-    }
 
     /** Pull source URIs from the share intent: clipData (multi/single) or EXTRA_STREAM (single SEND). */
     private fun collectSources(): List<Uri> {
