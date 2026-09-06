@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Parcelable
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.core.content.FileProvider
@@ -26,32 +27,54 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val outUris = ArrayList<Uri>()
+        val cleaned = ArrayList<Clean>()
         try {
             val clip = intent.clipData
             if (clip != null) {
                 for (i in 0 until clip.itemCount) {
-                    prepare(clip.getItemAt(i).uri)?.let(outUris::add)
+                    val uri = clip.getItemAt(i)?.uri ?: continue
+                    cleaned.addIfClean(uri)
                 }
             } else if (intent.hasExtra(Intent.EXTRA_STREAM)) {
                 IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-                ?.let { prepare(it) }?.let { outUris.add(it) }
+                ?.let { cleaned.addIfClean(it) }
             }
         } catch (e: Throwable) {
             // Nothing to hand off; user's share dies here rather than leak metadata.
         }
-        if (outUris.isEmpty()) {
+        if (cleaned.isEmpty()) {
             finish()
             return
         }
-        startActivity(destination(outUris))
+        startActivity(destination(cleaned))
         finish()
     }
 
-    /** Strip one source, cache the clean file, return its `content://` URI (or null). */
-    private fun prepare(src: Uri): Uri? {
+    /** Strip + cache one source; on any per-file failure, skip it, keep the batch alive. */
+    private fun ArrayList<Clean>.addIfClean(src: Uri) {
+        try {
+            prepare(src)?.let { add(it) }
+        } catch (e: Throwable) {
+            // corrupt/hostile single file: drop it, keep the rest
+        }
+    }
+
+    /** One stripped file ready to hand off. */
+    private data class Clean(val uri: Uri, val mime: String)
+
+    /** Strip one source, cache the clean file, return its URI + the ORIGINAL source mime
+     *  (FileProvider would re-guess from the neutral extension, losing .JPG → image/jpeg). */
+    private fun prepare(src: Uri): Clean? {
         val mime = contentResolver.getType(src) ?: return null
         return try {
+            // Cap the in-RAM buffer. Reality: phone photos top out ~20MB; WebP stripper
+            // already buffers the whole file. A pathological 1GB image would OOM before
+            // ANR — fail it fast instead. ponytail: buffer-in-RAM; swap to stream-rewrite
+            // when >64MB sources actually matter.
+            val size = try {
+                contentResolver.openAssetFileDescriptor(src, "r")?.use { it.length }
+            } catch (e: IOException) { null } // provider doesn't expose length: skip the cap
+            if (size != null && size > 64L * 1024 * 1024) return null
             val bytes = contentResolver.openInputStream(src)?.use { input ->
                 val buf = ByteArrayOutputStream()
                 when (mime) {
@@ -70,7 +93,7 @@ class TrampolineActivity : ComponentActivity() {
             val out = java.io.File(dir, name)
             if (!out.exists()) out.writeBytes(bytes)
 
-            FileProvider.getUriForFile(this, "$packageName.fileprovider", out)
+            Clean(FileProvider.getUriForFile(this, "$packageName.fileprovider", out), mime)
         } catch (e: IOException) {
             null
         }
@@ -82,20 +105,24 @@ class TrampolineActivity : ComponentActivity() {
             if (i >= 0 && c.moveToFirst()) c.getString(i) else null
         }
 
-    private fun destination(uris: List<Uri>): Intent {
-        val mimes = uris.mapNotNull { contentResolver.getType(it) }
-        val type = if (mimes.all { it.startsWith("image/") }) "image/*" else "application/pdf"
-        val send =
+    private fun destination(cleaned: List<Clean>): Intent {
+        val mimes = cleaned.map { it.mime }
+        val shareType = if (mimes.all { it.startsWith("image/") }) "image/*" else "application/pdf"
+        val uris = cleaned.map { it.uri }
+        val send = Intent(if (uris.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
+            @Suppress("DEPRECATION") type = shareType
+            // Single → Uri; multiple → ArrayList<Parcelable> (java.util.ArrayList isn't Parcelable itself).
             if (uris.size == 1) {
-                Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
+                putExtra(Intent.EXTRA_STREAM, uris[0])
             } else {
-                Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                }
+                putExtra(Intent.EXTRA_STREAM, ArrayList<Parcelable>(uris))
             }
-        @Suppress("DEPRECATION")
-        send.type = type
-        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // clipData is how ActivityManagerService derives URI grants for chooser-based
+            // shares: every URI must be in it or recipients only get read on the first.
+            clipData = ClipData.newUri(contentResolver, "share", uris[0])
+            for (u in uris.drop(1)) clipData?.addItem(ClipData.Item(u))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         return Intent.createChooser(send, null).apply {
             putExtra(
                 Intent.EXTRA_EXCLUDE_COMPONENTS,

@@ -98,6 +98,25 @@ class StripperTest {
     }
 
     @Test
+    fun pdf_scrubsInlineInfoDict() {
+        // /Info written INLINE in the trailer (<< after the name, not a ref) — the
+        // INFO_DIRECT branch. The dict's own keys must be scrubbed, not the NEXT dict.
+        val pdf = "%PDF-1.4\n" +
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+            "2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n" +
+            "trailer\n<< /Root 1 0 R /Info << /Title (Inline Title) /Author (Inline Author) >> >>\n" +
+            "startxref\n0\n%%EOF\n"
+        val out = java.io.ByteArrayOutputStream()
+        PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), out)
+        val s = out.toByteArray().toString(Charsets.ISO_8859_1)
+        assertFalse(s.contains("/Title (Inline Title)"))
+        assertFalse(s.contains("/Author (Inline Author)"))
+        // The OTHER dicts (catalog, pages) survive untouched.
+        assertTrue(s.contains("/Type /Catalog"))
+        assertTrue(s.contains("/Type /Pages"))
+    }
+
+    @Test
     fun pdf_scrubsInfoDict() {
         val out = java.io.ByteArrayOutputStream()
         PdfStripper.strip(pdf.toByteArray(Charsets.ISO_8859_1).inputStream(), out)

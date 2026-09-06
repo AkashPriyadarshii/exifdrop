@@ -32,7 +32,7 @@ object ImageStripper {
         // ExifInterface needs a seekable path, not a stream — copy to a temp file.
         val tmp = java.io.File.createTempFile("exifdrop_in", null)
         try {
-            input.use { it.copyTo(tmp.outputStream().buffered()) }
+            tmp.outputStream().buffered().use { input.copyTo(it) }
             val exif = ExifInterface(tmp.absolutePath)
             val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
             wipe(exif)
@@ -55,6 +55,10 @@ object ImageStripper {
         for (tag in INFO_TAGS) exif.setAttribute(tag, null)
         // XMP: separate-segment for JPEG/PNG cleared since 1.4.0; tag-700 cleared here too.
         exif.setAttribute(ExifInterface.TAG_XMP, null)
+        // Embedded ORF thumbnail can re-expose cropped content. exifinterface keeps the writeable
+// guard tag only for ORF; standard JPEG/PNG IFD1 thumbnails are dropped by the APP1 rebuild.
+// ponytail: JPEG IFD1 thumbnail survives via exifinterface's own rewrite — deep-format
+// segment culling is the upgrade path if audit fixtures show real leaks.
         // IPTC is inside APP13 (Adobe) — exifinterface doesn't read it; leave it for now
         // (rare, and its absence would force a re-encode we refuse for lossless).
         // ponytail: IPTC/APP13 left intact — add a raw APP13 drop if fixture shows leaks.
@@ -91,6 +95,7 @@ object ImageStripper {
         ExifInterface.TAG_GPS_TIMESTAMP,
         ExifInterface.TAG_GPS_TRACK,
         ExifInterface.TAG_GPS_TRACK_REF,
+        ExifInterface.TAG_GPS_DATESTAMP,
         ExifInterface.TAG_GPS_VERSION_ID,
     )
 
@@ -114,5 +119,10 @@ object ImageStripper {
         ExifInterface.TAG_SUBSEC_TIME_DIGITIZED,
         ExifInterface.TAG_SUBSEC_TIME_ORIGINAL,
         ExifInterface.TAG_USER_COMMENT,
+        // Identity & hardware — must not leak even if exifinterface can't read them fully.
+        ExifInterface.TAG_MAKER_NOTE,
+        ExifInterface.TAG_BODY_SERIAL_NUMBER,
+        ExifInterface.TAG_CAMERA_OWNER_NAME,
+        ExifInterface.TAG_LENS_SERIAL_NUMBER,
     )
 }

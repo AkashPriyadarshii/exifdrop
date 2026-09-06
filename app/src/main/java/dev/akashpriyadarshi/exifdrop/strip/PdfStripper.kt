@@ -28,7 +28,9 @@ object PdfStripper {
 
         INFO_REF.find(s)?.let { m -> blankObject(chars, m.groupValues[1].toInt()) }
             ?: INFO_DIRECT.find(s)?.let { m ->
-                val open = s.indexOf("<<", m.range.last + 1)
+                // Match is "/Info <<" — dict opens at range.last - 1 (the << right before the
+                // second <). Starting from range.last would land on the NEXT dict in the object.
+                val open = s.indexOf("<<", m.range.last - 1)
                 if (open >= 0) blankDict(chars, open, findDictEnd(chars, open))
             }
 
