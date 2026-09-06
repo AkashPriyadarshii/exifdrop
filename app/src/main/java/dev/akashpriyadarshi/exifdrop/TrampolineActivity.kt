@@ -35,9 +35,10 @@ class TrampolineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Draw over the WHOLE screen even when the WM hands a small freeform/"floating"
-        // rect. In freeform this is the onl lever that makes the cover fill the display:
-        // setLayout(MATCH_PARENT) only grows within the freeform bounds. Set before content.
+        // Make the cover draw over the whole display. In freeform/floating windowing the
+        // frame is what the OEM chose, so extend the DRAW beyond it: decor fills the screen.
+        // resizeableActivity=false (manifest) keeps this out of freeform on APIs that honor
+        // it. windowIsFloating is FALSE (opaque theme), so the window is a normal full task.
         window.addFlags(
             android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                     or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
