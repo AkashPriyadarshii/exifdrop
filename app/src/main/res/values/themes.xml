@@ -8,10 +8,13 @@
     </style>
 
     <!-- Covers the whole screen during the strip before the destination chooser.
-         Opaque: translucent windows can vanish from the share-sheet resolver on some
-         devices, and resizeableActivity=false already keeps this out of freeform.
-         Opaque paper so picking ExifDrop doesn't flash the app behind or the launcher. -->
+         Translucent: the window manager can never place a translucent activity into a
+         freeform/floating window, so picking ExifDrop always lands as a true full-screen
+         cover, never a resizable bubble (the original working config). The opaque paper
+         cover is drawn as CONTENT on top, so the user sees a solid full-screen screen,
+         not a transparent flash. -->
     <style name="Theme.ExifDrop.Trampoline" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@color/exifdrop_bg</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
