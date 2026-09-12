@@ -2,4 +2,5 @@
 <resources>
     <color name="exifdrop_bg">#12100E</color>
     <color name="trampoline_fg">#EDE8DC</color>
+    <color name="trampoline_accent">#4CAF78</color>
 </resources>

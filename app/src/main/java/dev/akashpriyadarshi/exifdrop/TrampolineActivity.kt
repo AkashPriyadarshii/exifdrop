@@ -49,6 +49,9 @@ class TrampolineActivity : ComponentActivity() {
         }
         val spinner = ProgressBar(this).apply {
             id = android.R.id.progress
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@TrampolineActivity, R.color.trampoline_accent)
+            )
         }
         val label = TextView(this).apply {
             text = "Stripping metadata…"

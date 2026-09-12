@@ -1,10 +1,16 @@
 package dev.akashpriyadarshi.exifdrop
 
+import android.content.ClipData
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import dev.akashpriyadarshi.exifdrop.ui.theme.ExifDropTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import java.io.File
 
 /**
  * Launcher shell: status-led hub + settings. Announced as "no UI in v0.1" is over; the
@@ -66,6 +73,26 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val intent = Intent(if (uris.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
+                component = ComponentName(context, TrampolineActivity::class.java)
+                if (uris.size == 1) {
+                    putExtra(Intent.EXTRA_STREAM, uris[0])
+                } else {
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                }
+                clipData = ClipData.newUri(context.contentResolver, "share", uris[0]).apply {
+                    for (u in uris.drop(1)) addItem(ClipData.Item(u))
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(intent)
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -96,8 +123,8 @@ fun MainScreen() {
             SettingsList(context)
             Spacer(Modifier.height(24.dp))
 
-            // Honest empty state.
-            EmptyState()
+            // Action / empty state
+            EmptyState(onPickFiles = { picker.launch(arrayOf("image/*", "application/pdf")) })
         }
     }
 }
@@ -136,6 +163,17 @@ private fun StatusHero() {
     }
 }
 
+private fun formatCacheSize(context: Context): String {
+    val dir = File(context.cacheDir, "cleaned")
+    val bytes = dir.listFiles()?.sumOf { it.length() } ?: 0L
+    return when {
+        bytes == 0L -> "0 B"
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    }
+}
+
 @Composable
 private fun SettingsList(context: Context) {
     Column {
@@ -143,6 +181,7 @@ private fun SettingsList(context: Context) {
         var cacheDays by remember { mutableStateOf(Prefs.cacheAgeDays(context)) }
         var stripGps by remember { mutableStateOf(Prefs.stripGps(context)) }
         var keepOrient by remember { mutableStateOf(Prefs.keepOrientation(context)) }
+        var cacheSize by remember { mutableStateOf(formatCacheSize(context)) }
 
         SettingRow("Filename") {
             Segmented(
@@ -151,17 +190,37 @@ private fun SettingsList(context: Context) {
                 onSelect = { pattern = it; Prefs.setFilenamePattern(context, it) },
             )
         }
-        SettingRow("Cache") {
+        SettingRow("Cache retention") {
             Segmented(
                 options = listOf("1" to "1 day", "7" to "7 days", "30" to "30 days"),
                 selected = cacheDays.toString(),
                 onSelect = { cacheDays = it.toInt(); Prefs.setCacheAgeDays(context, it.toInt()) },
             )
         }
-        ToggleRow("Strip GPS", "remove location tags · JPEG/PNG, WebP always stripped", stripGps) {
+        SettingRow("Storage ($cacheSize)") {
+            Surface(
+                onClick = {
+                    File(context.cacheDir, "cleaned").deleteRecursively()
+                    cacheSize = formatCacheSize(context)
+                    Toast.makeText(context, "Cleaned cache purged", Toast.LENGTH_SHORT).show()
+                },
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.error,
+            ) {
+                Text(
+                    text = "Clear now",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+        }
+        ToggleRow("Strip GPS", "remove location tags across JPEG, PNG, and WebP", stripGps) {
             stripGps = it; Prefs.setStripGps(context, it)
         }
-        ToggleRow("Keep orientation", "photos stay upright · JPEG/PNG, WebP always stripped", keepOrient) {
+        ToggleRow("Keep orientation", "photos stay upright across JPEG, PNG, and WebP", keepOrient) {
             keepOrient = it; Prefs.setKeepOrientation(context, it)
         }
     }
@@ -227,7 +286,8 @@ private fun Segmented(options: List<Pair<String, String>>, selected: String, onS
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium,
-                    fontFamily = if (isSel) FontFamily.Monospace else null,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
                     modifier = Modifier
                         .heightIn(min = 48.dp)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -238,27 +298,50 @@ private fun Segmented(options: List<Pair<String, String>>, selected: String, onS
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(onPickFiles: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = Icons.Filled.Check,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(36.dp),
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = "No strips yet",
+            text = "Share from any app or pick directly",
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Share a photo or PDF and pick ExifDrop to clean it.",
+            text = "Cleaned files are handed to your destination sheet",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(16.dp))
+        Surface(
+            onClick = onPickFiles,
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ) {
+            Row(
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Select photos or PDF",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
     }
 }
