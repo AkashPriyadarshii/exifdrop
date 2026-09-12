@@ -4,14 +4,15 @@ Project-level instructions for agents working on ExifDrop.
 
 ## What this is
 
-Android share-sheet metadata stripper. Picks up an image or PDF from any app, strips all metadata, and hands a clean `content://` to the real destination. The share trampoline is the primary entry (zero-UI, two taps); a thin Jetpack Compose shell shows status and hosts settings. Fully offline. Apache 2.0.
+Android share-sheet metadata stripper. Picks up an image or PDF from any app, strips all metadata, and hands a clean `content://` to the real destination. The share trampoline is the primary entry (zero-UI, two taps); a thin Jetpack Compose companion shell shows status, hosts settings, and offers a live Sanitizer Receipt sheet for inspecting files picked in-app. Fully offline. Apache 2.0.
 
 ## Ground rules
 
-- **Images (JPEG/PNG/WebP):** tag-wipe via `androidx.exifinterface:1.4.2` — lossless, binary-segment. WebP XMP is not covered by the library and needs a hand-rolled chunk strip.
+- **Images (JPEG/PNG/WebP):** tag-wipe via `androidx.exifinterface:1.4.2` — lossless, binary-segment. WebP XMP is not covered by the library and uses a hand-rolled chunk strip with a clean 26-byte TIFF orientation injection.
 - **PDF:** own minimal metadata rewriter (trailer `/Info` + XMP stream). No `pdfbox-android` — unmaintained since 2023, CVE-flagged.
-- **Trampoline:** one translucent activity, `noHistory` + `excludeFromRecents`, `exported="true"`. No layout, no visible screen.
-- **Compose shell:** `MainActivity` = status hub + settings. Launcher entry only; the trampoline does the work.
+- **Trampoline:** translucent `TrampolineActivity`, `noHistory` + `excludeFromRecents`, `exported="true"`, `launchMode="standard"`. Full-screen cover with branded spinner while stripping on background executor. Emits haptic tick and scrub confirmation Toast before destination chooser handoff.
+- **Compose shell:** `MainActivity` = status hub + settings + live Sanitizer Receipt bottom sheet for pre-flight metadata inspection.
+- **Quick Settings Tile:** `FilenameTileService` toggles between `share_<hash>` scrambling and keeping original filenames directly from the Android quick settings shade.
 - **Settings:** persisted in SharedPreferences (`dev.akashpriyadarshi.exifdrop.Prefs`). Filename pattern, GPS strip toggle, keep-orientation, cache age. Defaults are privacy-first (neutral names, GPS stripped, orientation kept).
 - **FileProvider** for hand-off (`content://` + read grant). `EXTRA_EXCLUDE_COMPONENTS` so our own app isn't re-listed in sheet two.
 - **Orientation** read before wipe, re-applied after (unless the setting is off).
@@ -20,13 +21,13 @@ Android share-sheet metadata stripper. Picks up an image or PDF from any app, st
 
 ## Non-negotiables
 
-Never re-encode. Never touch the source file. Never add a stale/CVE'd dependency.
+Never re-encode. Never touch the source file. Never add a stale/CVE'd dependency. Old share workflow must remain zero-UI and 100% functional.
 
 Stack: Kotlin, minSdk 24, targetSdk 36, Jetpack Compose (shell only), no DI.
 
 ## Process
 
-Per the project gate: md skeleton first at root (this file, `AGENTS.md`, `STATE.md`, `CHANGELOG.md`, `session-handoff.md`, `README.md`, `docs/{PRD,DESIGN,ARCHITECTURE,HANDOFF}`, `memory/`), get go on docs, then code. Tests run locally in full. Build/test on the test device over USB.
+Run local test suite: `.\gradlew.bat test` (15 unit tests covering JPEG, PNG, WebP, PDF). Build/test on the test device over USB.
 
 ## Release / asset update (v0.1) — do this, never debug
 

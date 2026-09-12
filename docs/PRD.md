@@ -16,22 +16,26 @@ FOSS/privacy-conscious Android users. The casual-photo crowd is served by native
 
 ## Scope — in (v0.1)
 
-- Images: JPEG, PNG, WebP — lossless tag-wipe + WebP XMP chunk-strip.
+- Images: JPEG, PNG, WebP — lossless tag-wipe + WebP XMP chunk-strip with orientation re-injection.
 - PDF: trailer `/Info` + XMP stream removal — hand-rolled, no pdfbox-android.
-- Trampoline activity — zero-UI strip path.
+- Trampoline activity — zero-UI share-sheet strip path with background executor, haptic tick, and scrub toast.
+- Quick Settings Tile — system shade toggle between `share_<hash>` and original filename.
 - Compose settings shell: status hub + filename pattern / GPS / orientation / cache age, persisted.
+- Live Sanitizer Receipt sheet — in-app pre-flight metadata inspection displaying detected tags and one-tap strip & share.
 - FileProvider hand-off, `EXTRA_EXCLUDE_COMPONENTS` anti-recursion.
 - Orientation guard, neutral filenames, cache auto-purge.
-- Apache 2.0, GitHub Releases + F-Droid path.
+- Apache 2.0, GitHub Releases (`exifdrop-v0.1-signed.apk`).
 
 ## Scope — out (v0.1)
 
-- Play Store, root/invisible intercept, office docs, video, batch/scan, strip history or visual diffs.
+- Play Store, root/invisible intercept, office docs, video, batch/scan, background gallery-crawler.
 
 ## Success criteria
 
 - Share an image or PDF → clean file lands at destination in two taps (trampoline + destination), no internet.
-- GPS/XMP/ICC/timestamps verified gone (fixtures + tests); orientation preserved; filename neutral.
+- Old share workflow remains pure zero-UI and 100% operational.
+- Live Sanitizer Receipt sheet lets users inspect files picked within the app before stripping.
+- GPS/XMP/ICC/timestamps verified gone (15 unit tests green); orientation preserved; filename neutral.
 - Installs on Android 7–16 (minSdk 24), no permissions, offline.
 
 ## Key risks

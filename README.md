@@ -30,60 +30,63 @@ Most photo metadata removers make you open an app, pick the file, strip, then st
 
 ## Features (v0.1)
 
+- **Share-sheet native (2 taps).** Share from WhatsApp, Gallery, Files, or Telegram → pick ExifDrop → hands clean copy to your destination. Zero UI freeze, background executor.
 - **Images: JPEG, PNG, WebP.** Lossless tag-wipe via `androidx.exifinterface`. GPS coordinates, camera model, timestamp and XMP removed without re-encoding pixels. No quality loss, no resize.
-- **Settings shell.** Filename pattern (neutral or original), GPS strip toggle, orientation keep toggle, cache age. Persisted, privacy-first defaults.
-- **Neutral filenames.** `share_<hash>.<ext>` by default. The `IMG_20250115_140233.jpg` date pattern does not survive either. Opt in to keep the original name.
-- **Orientation preserved.** Photos don't share sideways.
-- **Cache auto-purge.** Stripped copies older than the configured age (default 24h) clear on next share.
+- **PDF cleaning.** Hand-rolled trailer `/Info` and catalog XMP stream rewriter. Strips author, generator, and timestamps without bloated CVE-flagged libraries.
+- **Quick Settings Tile.** Toggle between neutral hash (`share_<hash>`) and original filenames instantly from your Android notification shade without opening the app.
+- **Live Sanitizer Receipt.** In-app file inspector sheet: pick photos or PDFs, review detected metadata (GPS, camera, lens, timestamps) with visual purge indicators, and strip + share in one tap.
+- **Scrub confirmation & haptics.** Ephemeral system toast ("Cleaned N files · metadata stripped") and native haptic tick upon successful scrub.
+- **Orientation preserved.** WebP and JPEG/PNG orientation tags are guarded so shared photos stay upright.
+- **Cache auto-purge.** Stripped copies in private cache clear on startup if older than configured days or >64MB total.
+- **Fully offline.** No INTERNET permission. No ads, no tracking, no servers.
 
 ## Install
 
-Grab the APK from [Releases](releases/latest) or [download `exifdrop-v0.1-signed.apk` directly](https://github.com/AkashPriyadarshii/exifdrop/releases/download/v0.1/exifdrop-v0.1-signed.apk) and install on Android 7.0+ (API 24). No permissions requested at runtime; the file is read from and written to app-private storage via `ContentResolver`.
+Grab the APK from [Releases](releases/latest) or [download `exifdrop-v0.1-signed.apk` directly](https://github.com/AkashPriyadarshii/exifdrop/releases/download/v0.1/exifdrop-v0.1-signed.apk) and install on Android 7.0+ (API 24). No runtime permissions requested.
 
-See it in action at the [ExifDrop website](https://akashpriyadarshii.github.io/exifdrop/) (includes a live in-browser demo: pick a photo, see what a share would leak, strip it).
-
-> F-Droid submission was decided out of scope for v0.1.
+See it in action at the [ExifDrop website](https://akashpriyadarshii.github.io/exifdrop/).
 
 ## How it works
 
+### 1. Primary Share-Sheet Flow (Zero-UI)
 ```
 share from any app → pick ExifDrop (image/*, application/pdf)
-  → ContentResolver reads Uri → strip metadata → neutral name → cache
-  → FileProvider content:// → second share sheet → real destination
+  → TrampolineActivity reads Uri in background → strips metadata → renames
+  → FileProvider content:// → haptic tick & scrub toast → destination chooser
 ```
 
-Photo metadata removal is lossless: the stripper edits the binary metadata segments and copies the pixels untouched. PDF cleaning neutralizes the trailer `/Info` dictionary and the XMP metadata stream in place, so stream offsets and the xref table stay valid.
+### 2. In-App Pre-Flight Inspection (Sanitizer Receipt)
+```
+open ExifDrop → tap "Inspect & strip files"
+  → live sheet displays detected EXIF / GPS / XMP tags
+  → tap "STRIP ALL & SHARE" → hands clean file to destination chooser
+```
+
+Photo metadata removal is lossless: the stripper edits binary segments and copies pixels byte-for-byte. PDF cleaning neutralizes trailer `/Info` fields and catalog XMP streams in place.
 
 ## Non-goals (v0.1)
 
 - Play Store distribution.
 - Root / invisible system-wide intercept (Magisk + LSPosed).
-- Office documents (docx/xlsx/pptx) and video. Future versions.
-- Batch, memory, gallery-scan workflows.
-- Strip history or visual before/after diffs in the shell.
+- Office documents (docx/xlsx/pptx) and video.
+- Batch background gallery-crawling.
 
 ## Privacy & security
 
-- No INTERNET permission. Nothing leaves the device, ever.
-- Stripped copies live in app-private cache and purge automatically, default one day.
+- No `android.permission.INTERNET`. Nothing leaves the device.
+- Stripped files live in app-private cache and auto-purge.
 - The original source file is never modified.
-- No account, no telemetry, no ads.
+- 100% FOSS, Apache 2.0 license, ₹0 budget stack.
 
 ## FAQ
 
-**Does it remove GPS from photos?** Yes. GPS EXIF tags are wiped from JPEG and PNG by default, toggle off in settings if you want to keep them. WebP doesn't parse the embedded TIFF, so WebP is always stripped.
+**Does it remove GPS from photos?** Yes. GPS EXIF tags are wiped by default across JPEG, PNG, and WebP.
 
-**Does it recompress or degrade photo quality?** No. Metadata removal is lossless; pixel data is copied byte-for-byte. A photo that is 100% quality stays 100% quality.
+**Does it degrade photo quality?** No. Metadata removal is lossless; pixels are copied untouched.
 
-**Which file types are supported?** JPEG, PNG, WebP and PDF. Office documents and video are out of scope for v0.1.
+**Which file types are supported?** JPEG, PNG, WebP, and PDF.
 
-**Does it need internet or a Google account?** No. Every byte is handled on-device through `ContentResolver` into app storage.
-
-**Is it paid?** No. ExifDrop is free open-source software under Apache License 2.0.
-
-## Contributing
-
-Bug reports and PRs welcome. See [CONTRIBUTING](CONTRIBUTING.md) and [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md).
+**Does it need internet or an account?** No. Pure local execution via `ContentResolver`.
 
 ## License
 
@@ -91,4 +94,17 @@ Apache License 2.0. See [LICENSE](LICENSE).
 
 ---
 
-**Author:** Akash Priyadarshi ([GitHub](https://github.com/AkashPriyadarshii), [Portfolio](https://akashpriyadarshi.vercel.app), [LinkedIn](https://linkedin.com/in/akash-priyadarshi-1aa51b37a), [Resume](https://akashpriyadarshii.github.io/Resume/)) &#183; Patna, Bihar, India
+## Ecosystem & Author
+
+### Ecosystem
+- [`design-genius`](https://github.com/AkashPriyadarshii/design-genius)
+- [`akash-design-engineering`](https://github.com/AkashPriyadarshii/akash-design-engineering)
+- [`tdlib-android`](https://github.com/AkashPriyadarshii/tdlib-android)
+- [`kharcha`](https://github.com/AkashPriyadarshii/kharcha)
+
+### Author
+- **Akash Priyadarshi** (Patna, Bihar, India)
+- [GitHub](https://github.com/AkashPriyadarshii) · [Portfolio](https://akashpriyadarshi.vercel.app) · [LinkedIn](https://linkedin.com/in/akash-priyadarshi-1aa51b37a) · [Resume](https://akashpriyadarshii.github.io/Resume/)
+
+### Social
+- [X / Twitter](https://x.com/Akash__ydv001) · [Threads](https://www.threads.com/@free_dev2026) · [Instagram](https://www.instagram.com/akash.priyadarshii/) · [Reddit](https://reddit.com/user/DragonfruitWeak2801)
