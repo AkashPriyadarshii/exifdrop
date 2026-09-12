@@ -113,6 +113,26 @@ fun MainScreen() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                listOf("JPEG", "PNG", "WEBP", "PDF").forEach { fmt ->
+                    Surface(
+                        shape = MaterialTheme.shapes.extraSmall,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Text(
+                            text = fmt,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(24.dp))
 
             // Status hero: mono readout, green when verified.

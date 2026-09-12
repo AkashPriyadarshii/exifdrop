@@ -4,9 +4,11 @@ import android.content.ClipData
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -96,6 +98,17 @@ class TrampolineActivity : ComponentActivity() {
                         Toast.makeText(this@TrampolineActivity,
                             "Skipped $skipped file${if (skipped > 1) "s" else ""} (corrupt or too large).",
                             Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(
+                            this@TrampolineActivity,
+                            "Cleaned ${cleaned.size} file${if (cleaned.size > 1) "s" else ""} · metadata stripped",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        window.decorView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    } else {
+                        window.decorView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     }
                     startActivity(destination(cleaned))
                     finish()
