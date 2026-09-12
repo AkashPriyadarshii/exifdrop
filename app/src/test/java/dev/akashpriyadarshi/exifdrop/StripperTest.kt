@@ -68,6 +68,47 @@ class StripperTest {
         }
     }
 
+    @Test
+    fun webp_preservesOrientationWhenRequested() {
+        val exifPayload = byteArrayOf(
+            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+            0x01, 0x00,
+            0x12, 0x01,
+            0x03, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        )
+        val vp8xPayload = byteArrayOf(0x0C, 0, 0, 0, 0, 0, 0, 0, 0, 0) // EXIF (0x08) | XMP (0x04)
+        val webpWithExif = "RIFF".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(0, 0, 0, 0) +
+            "WEBP".toByteArray(Charsets.ISO_8859_1) +
+            "VP8X".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(10, 0, 0, 0) + vp8xPayload +
+            "EXIF".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(exifPayload.size.toByte(), 0, 0, 0) + exifPayload +
+            "XMP ".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(4, 0, 0, 0) + "test".toByteArray(Charsets.ISO_8859_1) +
+            "VP8 ".toByteArray(Charsets.ISO_8859_1) + byteArrayOf(4, 0, 0, 0) + "pixl".toByteArray(Charsets.ISO_8859_1)
+
+        // keepOrientation = true: EXIF chunk kept (orientation only), XMP dropped, VP8X EXIF flag kept
+        val outKeep = java.io.ByteArrayOutputStream()
+        WebpStripper.strip(webpWithExif.inputStream(), outKeep, keepOrientation = true)
+        val resKeep = outKeep.toByteArray()
+        val sKeep = resKeep.toString(Charsets.ISO_8859_1)
+        assertTrue(sKeep.contains("EXIF"))
+        assertFalse(sKeep.contains("XMP "))
+        assertTrue(sKeep.contains("VP8 "))
+        val exifIdx = sKeep.indexOf("EXIF")
+        assertTrue(exifIdx >= 0)
+        assertEquals(0x06.toByte(), resKeep[exifIdx + 8 + 18])
+
+        // keepOrientation = false: EXIF chunk dropped completely
+        val outDrop = java.io.ByteArrayOutputStream()
+        WebpStripper.strip(webpWithExif.inputStream(), outDrop, keepOrientation = false)
+        val sDrop = outDrop.toByteArray().toString(Charsets.ISO_8859_1)
+        assertFalse(sDrop.contains("EXIF"))
+        assertFalse(sDrop.contains("XMP "))
+        assertTrue(sDrop.contains("VP8 "))
+    }
+
     // -- PDF -----------------------------------------------------------------
     private val pdf =
         "%PDF-1.4\n" +
@@ -180,6 +221,24 @@ class StripperTest {
             val out = Renamer.name(hostile, byteArrayOf(1, 2, 3), "original")
             assertTrue(out.startsWith("share_") || out.endsWith(".jpg"))
             assertFalse(out == "..jpg" || out == ".jpg" || out == "...jpg")
+        }
+    }
+
+    @Test
+    fun renamer_noExtension_returnsBareStemWithoutTrailingDot() {
+        val safe = Renamer.name("my_photo", byteArrayOf(1, 2, 3), "original")
+        assertEquals("my_photo", safe)
+        assertFalse(safe.endsWith("."))
+    }
+
+    @Test
+    fun pdf_nestedDictInsideObjStm_refuses() {
+        val pdfNested = "%PDF-1.4\n" +
+            "1 0 obj\n<< /Params << /Sub 1 >> /Type /ObjStm /N 1 /First 10 >>\nstream\n...\nendstream\nendobj\n" +
+            "trailer\n<< /Root 1 0 R /Info 2 0 R >>\n" +
+            "startxref\n0\n%%EOF\n"
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PdfStripper.strip(pdfNested.toByteArray(Charsets.ISO_8859_1).inputStream(), java.io.ByteArrayOutputStream())
         }
     }
 }

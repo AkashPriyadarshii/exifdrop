@@ -32,7 +32,7 @@ object ImageStripper {
     ) {
         // Detect type. exifinterface's [ExifInterface] works on a path; for WebP we hand-roll.
         if (mimeType == "image/webp") {
-            WebpStripper.strip(input, out)
+            WebpStripper.strip(input, out, keepOrientation = keepOrientation)
             return
         }
         // ExifInterface needs a seekable path, not a stream — copy to a temp file.

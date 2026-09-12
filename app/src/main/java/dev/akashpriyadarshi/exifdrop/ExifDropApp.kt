@@ -8,7 +8,9 @@ class ExifDropApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        purgeCache()
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute {
+            purgeCache()
+        }
     }
 
     /** Drop stale (> user's cache age) and oversized (>64MB) cleaned files on cold start. */

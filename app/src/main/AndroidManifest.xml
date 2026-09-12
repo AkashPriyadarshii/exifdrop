@@ -30,7 +30,7 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
-            android:launchMode="singleInstance"
+            android:launchMode="standard"
             android:theme="@style/Theme.ExifDrop.Trampoline"
             android:resizeableActivity="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"

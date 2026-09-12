@@ -15,14 +15,14 @@ object Renamer {
             // DISPLAY_NAME is provider-controlled. Sanitize to a bare basename: a hostile
             // provider can send "../../../shared_prefs/app.xml" and we must never let that
             // escape cache/cleaned/. Accept alnum + _-. (and spaces), reject everything else.
-            val stem = sourceName?.substringBeforeLast('.', "")?.take(80)
+            val stem = sourceName?.substringBeforeLast('.')?.take(80)
                 ?.map { if (it in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-.") it else '_' }
                 ?.joinToString("")
                 // Drop any run of two+ dots: no "..", no leading "." — else File(dir, "..")
                 // resolves to the PARENT of cache/cleaned/. A single interior dot is fine.
                 ?.replace("..", "_")
                 ?.trimStart('.')
-            if (!stem.isNullOrBlank()) return "$stem.$ext"
+            if (!stem.isNullOrBlank()) return if (ext.isEmpty()) stem else "$stem.$ext"
         }
         val hash = MessageDigest.getInstance("SHA-1").digest(bytes)
             .take(8) // 16 hex chars: collisions impossible for one share.

@@ -28,7 +28,7 @@ object PdfStripper {
 
         // Object streams (/ObjStm) compress /Info and metadata so the plaintext regexes
         // below silently no-op — that would hand off a DIRTY file. Detect and refuse.
-        val objStm = Regex("""(?<!\d)\d+\s+\d+\s+obj\s*<<[^>]*/Type\s*/ObjStm[^>]*>>""")
+        val objStm = Regex("""/Type\s*/ObjStm""")
         val infoRef = INFO_REF.find(s)
         val infoDirect = INFO_DIRECT.find(s)
         val metaRef = META_REF.find(s)
@@ -81,7 +81,7 @@ object PdfStripper {
         if (contentStart < 0 || contentStart > end) return
         // Neutralize /Filter and /Length in the stream dict so a strict viewer doesn't
         // misinterpret the now-space payload as flate or expect the old byte count.
-        val dictEnd = str.indexOf("stream", start) - 3 // "<<"...">> stream"
+        val dictEnd = str.indexOf("stream", start)
         if (dictEnd > start) {
             for (key in arrayOf("/Length", "/Filter")) {
                 val k = str.indexOf(key, start)
