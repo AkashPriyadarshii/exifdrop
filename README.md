@@ -20,6 +20,8 @@
   <a href="https://github.com/AkashPriyadarshii/exifdrop">GitHub</a>
 </div>
 
+[![release](https://img.shields.io/github/v/release/AkashPriyadarshii/exifdrop?style=flat-square&label=release)](https://github.com/AkashPriyadarshii/exifdrop/releases)
+
 Strip EXIF, GPS location, camera data, timestamps and XMP from photos and PDFs at the moment you share them. On Android, share any file to WhatsApp, email or Telegram, pick ExifDrop in the share sheet, and a clean, neutrally-named copy hands off to your real destination. Android 7.0+ (API 24). Fully offline, no INTERNET permission, Apache 2.0.
 
 ## Why
